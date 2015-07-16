@@ -1,0 +1,53 @@
+#!/bin/bash
+exec > >(tee cleanRun.txt)
+exec 2>&1
+
+printf "%s TIMESTAMP\n" `date +%Y%m%dT%H%M%S`
+THISPATH=`pwd`
+THISDIR=`basename $THISPATH`
+printf "Processing: %s\n" $THISPATH
+
+# Nice use of bash regex's
+#091203_I580_612ET_LT
+#130913_SN7001205_0176_AC2NPPACXX
+if [[ "$*" =~ "no-check" ]]; then
+        printf "Not checking cwd name for run directory pattern...\n\n";
+
+elif [[ ! ( $THISDIR =~ [0-9]{6}_[A-Za-z0-9]{4,6}_[0-9A-Z]{5,6}_[0-9A-Z]{2,3}   ||
+        $THISPATH =~ [0-9]{6}_[A-Za-z0-9]{4,6}_[0-9]{4}_[0-9A-Z]{10}        ||
+        $THISPATH =~ [0-9]{6}_SN[A-Za-z0-9]{4,7}_[0-9]{4}_[0-9A-Z]{10}
+
+)  ]];then
+        printf "The dir $THISDIR does not look like an illumina run directory\n\n";
+        exit 1;
+fi
+
+# Bash control operators Reminder
+#command1 && command2
+#   command2 is executed if, and only if, command1 returns an exit status of zero.
+#An OR list has the form
+#command1 || command2
+#   command2 is executed if and only if command1 returns a non-zero exit status.  The return status of AND and OR lists is the exit status of the last command executed in the list.
+
+set -x
+mkdir -p ./sgeLog
+rm -rf ReadPrep1/Images
+rm -rf ReadPrep2/Images
+rm -rf AnalysisLogs
+rm -rf Calibration*
+rm -rf ./Thumbnail_Images
+rm -rf ./finchResults
+rm -rf ./finch_results
+find . -type d -name 'postProcessing' | xargs -I'{}' bash -c "cd {}; ~tbeck/cleanOICR"
+find . -type d -name 'GERALD*' | xargs -I'{}' bash -c "cd {}; ~tbeck/cleanGerald"
+find . -type d -name 'BaseCalls' | xargs -I'{}' bash -c "cd {}; ~tbeck/cleanBasecalls"
+find . -type d -name 'Intensities' | xargs -I'{}' bash -c "cd {}; ~tbeck/cleanIntensities"
+find . -type d -name 'Bustard*' | xargs -I'{}' bash -c "cd {}; ~tbeck/cleanBustard"
+find . -type d -name '*Firecrest*' | xargs -I'{}' bash -c "cd {}; ~tbeck/cleanFirecrest"
+find . -type d -name 'Data' | xargs -I'{}' bash -c "cd {}; ~tbeck/cleanData"
+find . -type f ! \( -name 'cleanRun.txt' -o -name 'check*.txt' -o -name 'CLEANED.TIM' \) -a \( -name '*.txt' -o -name '*.log' -o -name '*.cfg' -o -name '*.xml' -o -name '*.csv' \) -print0 | xargs -0 -I'{}' qsub -N zip$THISDIR -cwd -o sgeLog -e sgeLog -b y "gzip \"{}\""  
+# Could have a bit of a race here with launched gzipping jobs running while script below is calcing space used. No showstopper - just some error messages in log file
+sleep 60  # weak attempt to prevent error messages in script below
+~tbeck/cleaned
+set +x
+printf "%s TIMESTAMP\n" `date +%Y%m%dT%H%M%S`

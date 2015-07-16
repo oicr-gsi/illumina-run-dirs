@@ -1,0 +1,55 @@
+#!/bin/bash
+# Redirect stdout ( > ) into a named pipe ( >() ) running "tee"
+exec > >(tee cleanFirecrest.txt)
+exec 2>&1
+
+printf "%s TIMESTAMP\n" `date +%Y%m%dT%H%M%S`
+THISPATH=`pwd`
+THISDIR=`basename $THISPATH`
+printf "Processing: %s\n" $THISPATH
+#if echo $1 > awk '$1 !~ /[0-9]{6}_[A-Za-z]{1}[0-9]{3,5}_[0-9]{4}_[A-Z0-9]{10}/ {exit 1}'; then
+#       printf "\nThis dir \'%s\' does not look like an illumina run directory\n\n" $1
+#       exit 1
+#fi
+# Nice use of bash regex's. We support the following examples via regex pattern
+# C1-202_Firecrest1.6.0_16-03-2010_mchan
+# C1-72_Firecrest1.9.5_12-12-2008_mchan
+# C1-101_Firecrest1.8.0a5_23-06-2010_mchan
+if [[ ! $THISDIR =~ C1-[0-9]{2,3}_Firecrest[0-9.a]{5,7}_[0-9]{2}-[0-9]{2}-[0-9]{4}_[a-zA-Z]{2,8} ]];then
+        printf "The dir $THISDIR does not look like an illumina Firecrest directory\n\n";
+        exit 1;
+fi
+
+# Bash control operators Reminders
+#command1 && command2
+#   command2 is executed if, and only if, command1 returns an exit status of zero.
+#An OR list has the form
+#command1 || command2
+#   command2 is executed if and only if command1 returns a non-zero exit status.  The return status of AND and OR lists is the exit status of the last command executed in the list.
+
+set -x
+#This was silly - was rm'ing the log file. Bit dangerous too
+#echo "rm files in $THISPATH"; find . -maxdepth 1 -type f | xargs rm 
+rm -rf *_pos.txt*
+rm -rf *_int.txt*
+rm -rf *_nse.txt*
+rm -rf config.xml*
+rm -rf default_offsets.txt.gz
+rm -rf finished.txt.gz
+rm -rf lanes.txt.gz
+rm -rf offsets_finished.txt.gz
+rm -rf params*.xml.gz
+rm -rf s_*_finished.txt.gz
+rm -rf support.txt*
+rm -rf tiles_cal.txt*
+rm -rf tiles.txt*
+#DIRS
+rm -rf Input 
+rm -rf Offsets
+rm -rf Sizes
+rm -rf Temp
+rm -rf Firecrest
+rm -rf Focus
+rm -rf Matrix
+rm -rf Temp
+printf "%s TIMESTAMP\n" `date +%Y%m%dT%H%M%S`

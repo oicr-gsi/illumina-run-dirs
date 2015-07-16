@@ -1,0 +1,14 @@
+#!/bin/bash
+# Redirect stdout ( > ) into a named pipe ( >() ) running "tee"
+exec > >(tee -a CLEANED.TIM)
+exec 2>&1
+
+printf "\n%s TIMESTAMP\n" `date +%Y%m%dT%H%M%S` 
+#for i in `ls -d *`;do du -h --max-depth 1 ${i};done >> CLEANED.TIM
+printf "\nDISK USAGE: \n"  
+du -h --max-depth 1 . 
+#find . -size +1G | xargs ls -lah >> CLEANED.TIM 2>&1
+printf "\nFiles +1G: \n" 
+find . -size +1G | sort -k9d | xargs -I'{}' ls -l {} | awk 'BEGIN{sum=0} {sum+=$5;$5=sprintf("%.1fG",$5/1024**3);print} END{printf ("%.2fG\n", sum/1024**3)}' 
+printf "\nSum all files: \n"
+find . -type f | xargs -I'{}' ls -l {} | awk 'BEGIN{sum=0} {sum+=$5} END{printf ("%.2fG\n", sum/1024**3)}' 
