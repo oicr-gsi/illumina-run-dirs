@@ -2,6 +2,9 @@
 exec > >(tee cleanRun.txt)
 exec 2>&1
 
+# Where is this script? we expect jq-linux-x86_64-static to be local with this script
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+
 printf "%s TIMESTAMP\n" `date +%Y%m%dT%H%M%S`
 THISPATH=`pwd`
 THISDIR=`basename $THISPATH`
@@ -38,16 +41,16 @@ rm -rf Calibration*
 rm -rf ./Thumbnail_Images
 rm -rf ./finchResults
 rm -rf ./finch_results
-find . -type d -name 'postProcessing' | xargs -I'{}' bash -c "cd {}; ~tbeck/cleanOICR"
-find . -type d -name 'GERALD*' | xargs -I'{}' bash -c "cd {}; ~tbeck/cleanGerald"
-find . -type d -name 'BaseCalls' | xargs -I'{}' bash -c "cd {}; ~tbeck/cleanBasecalls"
-find . -type d -name 'Intensities' | xargs -I'{}' bash -c "cd {}; ~tbeck/cleanIntensities"
-find . -type d -name 'Bustard*' | xargs -I'{}' bash -c "cd {}; ~tbeck/cleanBustard"
-find . -type d -name '*Firecrest*' | xargs -I'{}' bash -c "cd {}; ~tbeck/cleanFirecrest"
-find . -type d -name 'Data' | xargs -I'{}' bash -c "cd {}; ~tbeck/cleanData"
+find . -type d -name 'postProcessing' | xargs -I'{}' bash -c "cd {}; $SCRIPT_DIR/cleanOICR"
+find . -type d -name 'GERALD*' | xargs -I'{}' bash -c "cd {}; $SCRIPT_DIR/cleanGerald"
+find . -type d -name 'BaseCalls' | xargs -I'{}' bash -c "cd {}; $SCRIPT_DIR/cleanBasecalls"
+find . -type d -name 'Intensities' | xargs -I'{}' bash -c "cd {}; $SCRIPT_DIR/cleanIntensities"
+find . -type d -name 'Bustard*' | xargs -I'{}' bash -c "cd {}; $SCRIPT_DIR/cleanBustard"
+find . -type d -name '*Firecrest*' | xargs -I'{}' bash -c "cd {}; $SCRIPT_DIR/cleanFirecrest"
+find . -type d -name 'Data' | xargs -I'{}' bash -c "cd {}; $SCRIPT_DIR/cleanData"
 find . -type f ! \( -name 'cleanRun.txt' -o -name 'check*.txt' -o -name 'CLEANED.TIM' \) -a \( -name '*.txt' -o -name '*.log' -o -name '*.cfg' -o -name '*.xml' -o -name '*.csv' \) -print0 | xargs -0 -I'{}' qsub -N zip$THISDIR -cwd -o sgeLog -e sgeLog -b y "gzip \"{}\""  
 # Could have a bit of a race here with launched gzipping jobs running while script below is calcing space used. No showstopper - just some error messages in log file
 sleep 60  # weak attempt to prevent error messages in script below
-~tbeck/cleaned
+$SCRIPT_DIR/cleaned
 set +x
 printf "%s TIMESTAMP\n" `date +%Y%m%dT%H%M%S`
