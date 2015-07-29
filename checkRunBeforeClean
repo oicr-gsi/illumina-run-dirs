@@ -65,7 +65,7 @@ printf "~~~~~~\nFASTQ FILE CHECK:   Source file: %s   Look for: %s \n" $SOURCE $
 
 # Read carefully. Note for the terminal output the file size is highlighted for easy visual check. The files are sorted by filename so R1 and R2 should be paried and ordered by increasing lane
 #zgrep $FILE $SOURCE | grep BCLToFastq | awk -F'\t' '{print $47}' | xargs --no-run-if-empty ls -lalh | sort -k9 | awk -F' ' '{sep=""; for (i=1; i<=NF; i++) {if (i==5) printf("[1;37m%s%s[0m",sep,$i); else printf("%s%s",sep,$i); sep=OFS}; printf("\n") }' | tee >(sed -r "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g" >> seqwareFastqFiles.txt)
-zgrep $FILE $SOURCE | grep CASAVA | awk -F'\t' '{print $47}' | xargs --no-run-if-empty ls -lalh | sort -k9 | awk -F' ' '{
+zgrep $FILE $SOURCE | grep chemical/seq-na-fastq-gzip | awk -F'\t' '{print $47}' | xargs --no-run-if-empty ls -lalh | sort -k9 | awk -F' ' '{
 sep="";
 for (i=1; i<=NF; i++) {
     if (i==5)
@@ -78,6 +78,13 @@ for (i=1; i<=NF; i++) {
 };
 printf("\n")
  }'
+printf "~~~~~~\nSummary\n"
+zgrep $FILE $SOURCE | grep chemical/seq-na-fastq-gzip | awk -F'\t' '{printf "L00%s\t%s\t%s\n", $25, $28, $49}'| sort | uniq -c
+#printf "~"
+#zgrep $FILE $SOURCE | grep CASAVA | grep chemical/seq-na-fastq-gzip | awk -F'\t' '{printf "L00%s %s %s\n", $25, $28, $49}' | sort
+ 
+ 
+ 
 # }' | tee >(sed -r "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g" >> $OUTPUTFILE)
 
 # Now check the LIMS status of this run
@@ -94,7 +101,7 @@ printf "~~~~~~\nJIRA STATUS CHECK:   Run: %s \n" $FILE
 # auth - don't add password each time
 # Currently hard-coded for tbeck. I tried the curl -u : option with various security options and using a curl config file, but could not get it to work without auth on command line
 set -x
-curl -ks -u tbeck -H "Content-Type: application/json" https://jira.oicr.on.ca/rest/api/2/search?jql=text~\"$FILE\" | $SCRIPT_DIR/jq-linux-x86_64-static ". | {totalIssues: .total},(.issues | map({key,status: .fields.status.name,summary: .fields.summary,reporter: .fields.reporter.name, created: .fields.created, updated: .fields.updated}) | sort_by(.status) | reverse)"
+curl -ks -u mtaschuk -H "Content-Type: application/json" https://jira.oicr.on.ca/rest/api/2/search?jql=text~\"$FILE\" | $SCRIPT_DIR/jq-linux-x86_64-static ". | {totalIssues: .total},(.issues | map({key,status: .fields.status.name,summary: .fields.summary,reporter: .fields.reporter.name, created: .fields.created, updated: .fields.updated}) | sort_by(.status) | reverse)"
 set +x
 
 # clean out color annotation for screen display from log
