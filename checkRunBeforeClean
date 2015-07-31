@@ -65,7 +65,7 @@ printf "~~~~~~\nFASTQ FILE CHECK:   Source file: %s   Look for: %s \n" $SOURCE $
 
 # Read carefully. Note for the terminal output the file size is highlighted for easy visual check. The files are sorted by filename so R1 and R2 should be paried and ordered by increasing lane
 #zgrep $FILE $SOURCE | grep BCLToFastq | awk -F'\t' '{print $47}' | xargs --no-run-if-empty ls -lalh | sort -k9 | awk -F' ' '{sep=""; for (i=1; i<=NF; i++) {if (i==5) printf("[1;37m%s%s[0m",sep,$i); else printf("%s%s",sep,$i); sep=OFS}; printf("\n") }' | tee >(sed -r "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g" >> seqwareFastqFiles.txt)
-zgrep $FILE $SOURCE | grep chemical/seq-na-fastq-gzip | awk -F'\t' '{print $47}' | xargs --no-run-if-empty ls -lalh | sort -k9 | awk -F' ' '{
+zgrep $FILE $SOURCE | grep chemical/seq-na-fastq-gzip | grep -v Xenome | awk -F'\t' '{print $47}' | xargs --no-run-if-empty ls -lalh | sort -k9 | awk -F' ' '{
 sep="";
 for (i=1; i<=NF; i++) {
     if (i==5)
@@ -79,7 +79,7 @@ for (i=1; i<=NF; i++) {
 printf("\n")
  }'
 printf "~~~~~~\nSummary\n"
-zgrep $FILE $SOURCE | grep chemical/seq-na-fastq-gzip | awk -F'\t' '{printf "L00%s\t%s\t%s\n", $25, $28, $49}'| sort | uniq -c
+zgrep $FILE $SOURCE | grep chemical/seq-na-fastq-gzip | grep -v Xenome | awk -F'\t' '{printf "L00%s\t%s\t%sG\n", $25, $28, ($49/1000000000)}'| sort | uniq -c
 #printf "~"
 #zgrep $FILE $SOURCE | grep CASAVA | grep chemical/seq-na-fastq-gzip | awk -F'\t' '{printf "L00%s %s %s\n", $25, $28, $49}' | sort
  
