@@ -5,7 +5,7 @@ declare -a instruments
 
 instruments=/oicr/data/archive/@([A-Z][0-9])*
 outputDir=/oicr/data/archive/web/wideInstrumentReport
-runDir=~seqprodbio/seq_prod_bio/pipeline/wideInstrumentReport
+runDir=~seqprodbio/illumina-run-dirs/report
 
 zipRecipients="lee.timms@oicr.on.ca,kristen.geras@oicr.on.ca,karolina.czajka@oicr.on.ca,jeremy.johns@oicr.on.ca,morgan.taschuk@oicr.on.ca"
 logRecipients="tbeck@oicr.on.ca"
@@ -24,7 +24,7 @@ for i in $instruments
 do
 	instrument=`basename $i`
 
-	qsub -cwd -b y -N ${instrument}Report -m beas -M $logRecipients -e $outputDir/qsub_${instrument}.log -o $outputDir/qsub_${instrument}.log -l h_vmem=4g "export PERL5LIB=/oicr/local/analysis/lib/perl/pipe/lib/perl5; OICR_PERL_BIN=/oicr/local/analysis/lib/perl/pipe/bin; export PATH=$PATH:$OICR_PERL_BIN; $runDir/wideInstrumentReport-v3.pl $timeStamp $filePrefix $fileSuffix $outputDir /oicr/data/archive/$instrument/*/jsonReport/*.json >> $outputDir/${instrument}_error.log 2>&1"
+	qsub -cwd -b y -N ${instrument}Report -m beas -M $logRecipients -e $outputDir/qsub_${instrument}.log -o $outputDir/qsub_${instrument}.log -l h_vmem=4g "export PERL5LIB=/oicr/local/analysis/lib/perl/pipe/lib/perl5; OICR_PERL_BIN=/oicr/local/analysis/lib/perl/pipe/bin; export PATH=$PATH:$OICR_PERL_BIN; $runDir/wideInstrumentReport.pl $timeStamp $filePrefix $fileSuffix $outputDir /oicr/data/archive/$instrument/*/jsonReport/*.json >> $outputDir/${instrument}_error.log 2>&1"
 	
 	if $firstloop == "true"
 		then
