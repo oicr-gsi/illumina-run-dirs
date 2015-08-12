@@ -734,22 +734,39 @@ sub readRunInfoXML
 	
 	while($l = <XML>)
 	{
-		if($l =~ /<Read Number="(.*?)" NumCycles="(.*?)" IsIndexedRead="(.*?)" \/>/)
-		{
-			$readHash{$1}{NumCycles} = $2;
-			$readHash{$1}{IsIndexedRead} = $3;
-			if($3 eq 'N' && $firstRead) # The first non-indexed read is read1
+		my $readNum;
+		if($l =~ /<Read.* Number="(.*?)".*>/)
+                {
+			$readNum=$1;
+			if($l =~ /<Read.* NumCycles="(.*?)".*>/)
 			{
-				$read1 = $1;
-				$firstRead = 0;
+				$readHash{$readNum}{NumCycles} = $1;
 			}
-			elsif($3 eq 'N') # read2 will be the last non-indexed read
+
+			if($l =~ /<Read.* IsIndexedRead="(.*?)".*>/)
 			{
-				$read2 = $1;
+				$readHash{$readNum}{IsIndexedRead} = $1;
+			}
+			if($readHash{$readNum}{IsIndexedRead} eq 'N')
+			{
+				if($firstRead) # The first non-indexed read is read1
+				{
+					$read1 = $readNum;
+					$firstRead = 0;
+				}
+				#read2 will be the last non-indexed read
+				else 
+				{
+					$read2 = $readNum;
+				}
 			}
 		}
 	}
 
+	if (not defined $read1 or not defined $read2)
+	{
+		print("Missing Read Number, NumCycles and IsIndexedRead in RunInfo.xml at $runxmlPath\n");
+	}
         close XML;
 	
 	return ($read1, $read2, \%readHash);
