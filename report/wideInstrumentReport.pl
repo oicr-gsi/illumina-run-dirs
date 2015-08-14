@@ -269,64 +269,68 @@ for my $j (sort keys %jsonHash)
 			print NOXMLPATH "$xmlpathPrev\n";
 			close NOXMLPATH;
 		}
-		
+		$i = 2;			# open read files until you find the last one (which is hopefully read 2)
 		# Opens and parses read2.xml if it exists
 		# read number is incremented - the highest read XML will contain the values for read2 
-		if(-e "$xmlPath/read2.xml")
+		while(-e "$xmlPath/read$i.xml" or -e "$xmlPath/read$i.xml.gz")
 		{
-			$i = 2;			# open read files until you find the last one (which is hopefully read 2)
-			while(open(XMLFILE, "$xmlPath/read$i.xml"))
+			
+			if (not open(XMLFILE, "$xmlPath/read$i.xml"))
 			{
-				while ($l = <XMLFILE>)      # should just be one line...
+				if (not open (XMLFILE, "gzip -dc $xmlPath/read$i.xml.gz|"))
 				{
-					if ($l =~ /<Lane key="$lane".*?TileCount="(.*?)".*?ClustersRaw="(.*?)".*?PrcPFClusters="(.*?)".*?Phasing="(.*?)" Prephasing="(.*?)".*?ErrRatePhiX="(.*?)" ErrRatePhiXSD="(.*?)"/)
-					{
-						# data is classified as XML
-						$reportHash{"XML"}{"R2 Phasing"} = $4;
-						$reportHash{"XML"}{"R2 Prephasing"} = $5;
-						$reportHash{"XML"}{"R2 PhiX Error %"} = $6;
-						$reportHash{"XML"}{"R2phixErrorRateSD"} = $7;
-					}
+					print ("Missing $xmlPath/read$i.xml or read$i.xml.gz");
 				}
-				close XMLFILE;
-				
-				open(XMLPATH, ">>$outputDir/xml_present.txt");
-                                print XMLPATH "$xmlPath/read$i.xml\n";
-                                close XMLPATH;
-				
-				$i++;
 			}
-		
-			if($i == 2)
+			while ($l = <XMLFILE>)      # should just be one line...
 			{
-				warn "Couldn't open [$xmlPath/read2.xml]\n";
+				if ($l =~ /<Lane key="$lane".*?TileCount="(.*?)".*?ClustersRaw="(.*?)".*?PrcPFClusters="(.*?)".*?Phasing="(.*?)" Prephasing="(.*?)".*?ErrRatePhiX="(.*?)" ErrRatePhiXSD="(.*?)"/)
+				{
+					# data is classified as XML
+					$reportHash{"XML"}{"R2 Phasing"} = $4;
+					$reportHash{"XML"}{"R2 Prephasing"} = $5;
+					$reportHash{"XML"}{"R2 PhiX Error %"} = $6;
+					$reportHash{"XML"}{"R2phixErrorRateSD"} = $7;
+				}
 			}
+			close XMLFILE;
+			
+			open(XMLPATH, ">>$outputDir/xml_present.txt");
+                        print XMLPATH "$xmlPath/read$i.xml\n";
+                        close XMLPATH;
+			
+			$i++;
+		}
+		
+		if($i == 2)
+		{
+				warn "Couldn't open [$xmlPath/read2.xml]\n";
 		}
 		elsif($xmlpathPrev ne $xmlPath)
 		{
 			# assigns 'n/a' in place of missing data if read2.xml doesn't exist
 			$reportHash{"XML"}{"R2 Phasing"} = "n/a";
-                        $reportHash{"XML"}{"R2 Prephasing"} = "n/a";
-                        $reportHash{"XML"}{"R2 PhiX Error %"} = "n/a";
-                        $reportHash{"XML"}{"R2phixErrorRateSD"} = "n/a";
-			
+	                $reportHash{"XML"}{"R2 Prephasing"} = "n/a";
+	                $reportHash{"XML"}{"R2 PhiX Error %"} = "n/a";
+	                $reportHash{"XML"}{"R2phixErrorRateSD"} = "n/a";
+		
 			open(NOXMLPATH, ">>$outputDir/xml_missing.txt");
 			print NOXMLPATH "Couldn't Find [$xmlPath/read2.xml]\n";
 			
 			print NOXMLPATH "$xmlpathPrev\n";
 			close NOXMLPATH;
-        	}
+	       	}
 		else
 		{
 			# assigns 'n/a' in place of missing data if read2.xml doesn't exist
 			$reportHash{"XML"}{"R2 Phasing"} = "n/a";
-                        $reportHash{"XML"}{"R2 Prephasing"} = "n/a";
-                        $reportHash{"XML"}{"R2 PhiX Error %"} = "n/a";
-                        $reportHash{"XML"}{"R2phixErrorRateSD"} = "n/a";
+	                $reportHash{"XML"}{"R2 Prephasing"} = "n/a";
+	                $reportHash{"XML"}{"R2 PhiX Error %"} = "n/a";
+	                $reportHash{"XML"}{"R2phixErrorRateSD"} = "n/a";
 		}
 		
 		$reportHash{"XML"}{"Source"} = "Read XML";	
-	}
+	}#end if XML
 	elsif($xmlpathPrev ne $xmlPath)
 	{
 		open(NOXMLPATH, ">>$outputDir/xml_missing.txt");
