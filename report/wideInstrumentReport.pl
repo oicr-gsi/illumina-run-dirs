@@ -234,32 +234,33 @@ for my $j (sort keys %jsonHash)
 	{
 		# read1.xml is checked for existence, opened, and parsed
 		# error messages are output accordingly 
-		if(-e "$xmlPath/read1.xml")
+		if (-e "$xmlPath/read1.xml" or -e "$xmlPath/read1.xml.gz")
 		{
-			if (open (XMLFILE, "$xmlPath/read1.xml"))
-			{	
-				while ($l = <XMLFILE>)      # should just be one line...
-				{
-					if ($l =~ /<Lane key="$lane".*?TileCount="(.*?)".*?ClustersRaw="(.*?)".*?PrcPFClusters="(.*?)".*?Phasing="(.*?)" Prephasing="(.*?)".*?ErrRatePhiX="(.*?)" ErrRatePhiXSD="(.*?)"/)
-					{
-						# data is classified as XML
-						$reportHash{"XML"}{"# Raw Clusters"} = $1 * $2;
-						$reportHash{"XML"}{"PF %"} = $3;
-						$reportHash{"XML"}{"R1 Phasing"} = $4;
-						$reportHash{"XML"}{"R1 Prephasing"} = $5;
-						$reportHash{"XML"}{"R1 PhiX Error %"} = $6;
-						$reportHash{"XML"}{"R1phixErrorRateSD"} = $7;
-					}
-				}
-				close XMLFILE;
-				open(XMLPATH, ">>$outputDir/xml_present.txt");
-				print XMLPATH "$xmlPath/read1.xml\n";
-				close XMLPATH;
-			}
-			else
+		        if (not open (XMLFILE, "$xmlPath/read1.xml"))
+	        	{
+	                	if (not open (XMLFILE,"gzip -dc $xmlPath/read1.xml.gz|"))
+		                {
+		                        print ("Missing $xmlPath/read1.xml or read1.xml.gz");
+		                }
+		        }
+	
+			while ($l = <XMLFILE>)      # should just be one line...
 			{
-				warn "Couldn't open [$xmlPath/read1.xml]\n";
+				if ($l =~ /<Lane key="$lane".*?TileCount="(.*?)".*?ClustersRaw="(.*?)".*?PrcPFClusters="(.*?)".*?Phasing="(.*?)" Prephasing="(.*?)".*?ErrRatePhiX="(.*?)" ErrRatePhiXSD="(.*?)"/)
+				{
+					# data is classified as XML
+					$reportHash{"XML"}{"# Raw Clusters"} = $1 * $2;
+					$reportHash{"XML"}{"PF %"} = $3;
+					$reportHash{"XML"}{"R1 Phasing"} = $4;
+					$reportHash{"XML"}{"R1 Prephasing"} = $5;
+					$reportHash{"XML"}{"R1 PhiX Error %"} = $6;
+					$reportHash{"XML"}{"R1phixErrorRateSD"} = $7;
+				}
 			}
+			close XMLFILE;
+			open(XMLPATH, ">>$outputDir/xml_present.txt");
+			print XMLPATH "$xmlPath/read1.xml\n";
+			close XMLPATH;
 		}
 		elsif($xmlpathPrev ne $xmlPath)
 		{
