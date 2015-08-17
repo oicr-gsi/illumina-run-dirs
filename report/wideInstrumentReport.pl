@@ -5,6 +5,7 @@ use warnings;
 use JSON;
 use Data::Dumper;
 use Cwd;
+use POSIX qw/strftime/;
 
 my @jsonFiles = @ARGV;
 
@@ -16,7 +17,7 @@ my $file;
 my $timeStamp=""; 
 my $filePrefix="";
 my $fileSuffix="";
-
+my $logtime=strftime('%Y-%m-%d',localtime);
 
 # Loops through input arguments and sorts filenames from variables
 # If input is a JSON file, file is decoded into perl hash 
@@ -188,7 +189,7 @@ for my $j (sort keys %jsonHash)
 	else
 	{
         	open (MissingLane, ">$outputDir/missing_lane.txt");
-        	print MissingLane "Lane not defined in $j\n";
+        	print MissingLane "$logtime Lane not defined in $j\n";
         	close MissingLane;
         	die "Lane not defined in $j\n";
         }
@@ -240,8 +241,8 @@ for my $j (sort keys %jsonHash)
 	        	{
 	                	if (not open (XMLFILE,"gzip -dc $xmlPath/read1.xml.gz|"))
 		                {
-		                        print ("Missing $xmlPath/read1.xml or read1.xml.gz");
-		                }
+		                        print ("$logtime Missing $xmlPath/read1.xml or read1.xml.gz");
+				}
 		        }
 	
 			while ($l = <XMLFILE>)      # should just be one line...
@@ -259,14 +260,14 @@ for my $j (sort keys %jsonHash)
 			}
 			close XMLFILE;
 			open(XMLPATH, ">>$outputDir/xml_present.txt");
-			print XMLPATH "$xmlPath/read1.xml\n";
+			print XMLPATH "$logtime $xmlPath/read1.xml\n";
 			close XMLPATH;
 		}
 		elsif($xmlpathPrev ne $xmlPath)
 		{
 			open(NOXMLPATH, ">>$outputDir/xml_missing.txt");
-                	print NOXMLPATH "Couldn't Find [$xmlPath/read1.xml]\n";
-			print NOXMLPATH "$xmlpathPrev\n";
+                	print NOXMLPATH "$logtime Couldn't Find [$xmlPath/read1.xml]\n";
+			print NOXMLPATH "$logtime $xmlpathPrev\n";
 			close NOXMLPATH;
 		}
 		$i = 2;			# open read files until you find the last one (which is hopefully read 2)
@@ -274,17 +275,22 @@ for my $j (sort keys %jsonHash)
 		# read number is incremented - the highest read XML will contain the values for read2 
 		while(-e "$xmlPath/read$i.xml" or -e "$xmlPath/read$i.xml.gz")
 		{
-			
 			if (not open(XMLFILE, "$xmlPath/read$i.xml"))
 			{
 				if (not open (XMLFILE, "gzip -dc $xmlPath/read$i.xml.gz|"))
 				{
-					print ("Missing $xmlPath/read$i.xml or read$i.xml.gz");
+					print("$logtime Missing $xmlPath/read$i.xml or read$i.xml.gz");
+					# assigns 'n/a' in place of missing data if read2.xml doesn't exist
+					$reportHash{"XML"}{"R2 Phasing"} = "n/a";
+					$reportHash{"XML"}{"R2 Prephasing"} = "n/a";
+				        $reportHash{"XML"}{"R2 PhiX Error %"} = "n/a";
+				        $reportHash{"XML"}{"R2phixErrorRateSD"} = "n/a";
 				}
 			}
+			
 			while ($l = <XMLFILE>)      # should just be one line...
 			{
-				if ($l =~ /<Lane key="$lane".*?TileCount="(.*?)".*?ClustersRaw="(.*?)".*?PrcPFClusters="(.*?)".*?Phasing="(.*?)" Prephasing="(.*?)".*?ErrRatePhiX="(.*?)" ErrRatePhiXSD="(.*?)"/)
+				while ($l =~ /<Lane key="$lane".*?TileCount="(.*?)".*?ClustersRaw="(.*?)".*?PrcPFClusters="(.*?)".*?Phasing="(.*?)" Prephasing="(.*?)".*?ErrRatePhiX="(.*?)" ErrRatePhiXSD="(.*?)".*>/g)
 				{
 					# data is classified as XML
 					$reportHash{"XML"}{"R2 Phasing"} = $4;
@@ -304,10 +310,7 @@ for my $j (sort keys %jsonHash)
 		
 		if($i == 2)
 		{
-				warn "Couldn't open [$xmlPath/read2.xml]\n";
-		}
-		elsif($xmlpathPrev ne $xmlPath)
-		{
+			warn "Couldn't open [$xmlPath/read2.xml]\n";
 			# assigns 'n/a' in place of missing data if read2.xml doesn't exist
 			$reportHash{"XML"}{"R2 Phasing"} = "n/a";
 	                $reportHash{"XML"}{"R2 Prephasing"} = "n/a";
@@ -315,27 +318,19 @@ for my $j (sort keys %jsonHash)
 	                $reportHash{"XML"}{"R2phixErrorRateSD"} = "n/a";
 		
 			open(NOXMLPATH, ">>$outputDir/xml_missing.txt");
-			print NOXMLPATH "Couldn't Find [$xmlPath/read2.xml]\n";
+			print NOXMLPATH "$logtime Couldn't Find [$xmlPath/read2.xml]\n";
 			
-			print NOXMLPATH "$xmlpathPrev\n";
+			print NOXMLPATH "$logtime $xmlpathPrev\n";
 			close NOXMLPATH;
 	       	}
-		else
-		{
-			# assigns 'n/a' in place of missing data if read2.xml doesn't exist
-			$reportHash{"XML"}{"R2 Phasing"} = "n/a";
-	                $reportHash{"XML"}{"R2 Prephasing"} = "n/a";
-	                $reportHash{"XML"}{"R2 PhiX Error %"} = "n/a";
-	                $reportHash{"XML"}{"R2phixErrorRateSD"} = "n/a";
-		}
 		
 		$reportHash{"XML"}{"Source"} = "Read XML";	
 	}#end if XML
 	elsif($xmlpathPrev ne $xmlPath)
 	{
 		open(NOXMLPATH, ">>$outputDir/xml_missing.txt");
-                print NOXMLPATH "Couldn't Find [$xmlPath/read1.xml]\n";
-		print NOXMLPATH "Couldn't Find [$xmlPath/read2.xml]\n";
+                print NOXMLPATH "$logtime Couldn't Find [$xmlPath/read1.xml]\n";
+		print NOXMLPATH "$logtime Couldn't Find [$xmlPath/read2.xml]\n";
 		close NOXMLPATH;
 	}
 	
@@ -411,14 +406,14 @@ for my $j (sort keys %jsonHash)
 		if(!-e "$runxmlPath/InterOp/TileMetricsOut.bin")
 		{
 			open(NOBIN, ">>$outputDir/binary_missing.txt");
-			print NOBIN "Couldn't Find [$runxmlPath/InterOp/TileMetricsOut.bin]\n";
+			print NOBIN "$logtime Couldn't Find [$runxmlPath/InterOp/TileMetricsOut.bin]\n";
 			close NOBIN;
 		}
 		
 		if(!-e "$runxmlPath/InterOp/ErrorMetricsOut.bin")
 		{
 			open(NOBIN, ">>$outputDir/binary_missing.txt");
-			print NOBIN "Couldn't Find [$runxmlPath/InterOp/ErrorMetricsOut.bin]\n";
+			print NOBIN "$logtime Couldn't Find [$runxmlPath/InterOp/ErrorMetricsOut.bin]\n";
 			close NOBIN;
 		}
 	}
@@ -438,8 +433,8 @@ for my $j (sort keys %jsonHash)
 			open(NOBINorXML, ">>$outputDir/binaryxml_missing.txt");
                         if($runPrev ne $jsonHash{$j}{"run name"})
                         {
-                                print NOBINorXML "Couldn't Find [$xmlPath]\n";
-                                print NOBINorXML "Couldn't Find [$runxmlPath/InterOp]\n";
+                                print NOBINorXML "$logtime Couldn't Find [$xmlPath]\n";
+                                print NOBINorXML "$logtime Couldn't Find [$runxmlPath/InterOp]\n";
                         }
                         close NOBINorXML;
 		}
@@ -448,9 +443,9 @@ for my $j (sort keys %jsonHash)
 			open(NOBINorXML, ">>$outputDir/binaryxml_missing.txt");
                         if($runPrev ne $jsonHash{$j}{"run name"})
                         {
-                                print NOBINorXML "Couldn't Find [$xmlPath]\n";
-                                print NOBINorXML "Couldn't Find [$runxmlPath/InterOp/TileMetricsOut.bin]\n";
-                                print NOBINorXML "Couldn't Find [$runxmlPath/InterOp/ErrorMetricsOut.bin]\n";
+                                print NOBINorXML "$logtime Couldn't Find [$xmlPath]\n";
+                                print NOBINorXML "$logtime Couldn't Find [$runxmlPath/InterOp/TileMetricsOut.bin]\n";
+                                print NOBINorXML "$logtime Couldn't Find [$runxmlPath/InterOp/ErrorMetricsOut.bin]\n";
                         }
                         close NOBINorXML;
 		}
@@ -459,15 +454,15 @@ for my $j (sort keys %jsonHash)
 			open(NOBINorXML, ">>$outputDir/binaryxml_missing.txt");
                         if($runPrev ne $jsonHash{$j}{"run name"})
                         {
-                                print NOBINorXML "Couldn't Find [$xmlPath]\n";
+                                print NOBINorXML "$logtime Couldn't Find [$xmlPath]\n";
 
                                 if(-e "$runxmlPath/InterOp/TileMetricsOut.bin")
                                 {
-                                        print NOBINorXML "Couldn't Find [$runxmlPath/InterOp/ErrorMetricsOut.bin]\n";
+                                        print NOBINorXML "$logtime Couldn't Find [$runxmlPath/InterOp/ErrorMetricsOut.bin]\n";
                                 }
                                 else
                                 {
-                                        print NOBINorXML "Couldn't Find [$runxmlPath/InterOp/TileMetricsOut.bin]\n";
+                                        print NOBINorXML "$logtime Couldn't Find [$runxmlPath/InterOp/TileMetricsOut.bin]\n";
                                 }
                         }
                         close NOBINorXML;
@@ -733,7 +728,7 @@ sub readRunInfoXML
 	{
 		if (not open (XML,"gzip -dc $runxmlPath/RunInfo.xml.gz|"))
 		{
-			print ("Missing $runxmlPath/RunInfo.xml or RunInfo.xml.gz");
+			print ("$logtime Missing $runxmlPath/RunInfo.xml or RunInfo.xml.gz");
 		}
 	}
 	
@@ -770,7 +765,7 @@ sub readRunInfoXML
 
 	if (not defined $read1 or not defined $read2)
 	{
-		print("Missing Read Number, NumCycles and IsIndexedRead in RunInfo.xml at $runxmlPath\n");
+		print("$logtime Missing Read Number, NumCycles and IsIndexedRead in RunInfo.xml at $runxmlPath\n");
 	}
         close XML;
 	
@@ -1033,7 +1028,7 @@ sub determineFormat
 	
 	if(!defined $value)
 	{
-		print "Value Not Defined for $field\n";
+		print "$logtime Value Not Defined for $field\n";
                 print $fileHandle "n/a (was not defined),";
 	}
 	elsif($value  =~ /^[+-]?\d*\.?\d+$/)
