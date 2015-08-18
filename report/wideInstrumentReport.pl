@@ -252,10 +252,11 @@ for my $j ( sort keys %jsonHash ) {
             print NOXMLPATH "$logtime $xmlpathPrev\n";
             close NOXMLPATH;
         }
-        $i = 2
-          ; # open read files until you find the last one (which is hopefully read 2)
-            # Opens and parses read2.xml if it exists
-         # read number is incremented - the highest read XML will contain the values for read2
+        $i = 2;
+
+# open read files until you find the last one (which is hopefully read 2)
+# Opens and parses read2.xml if it exists
+# read number is incremented - the highest read XML will contain the values for read2
         while ( -e "$xmlPath/read$i.xml" or -e "$xmlPath/read$i.xml.gz" ) {
             if ( not open( XMLFILE, "$xmlPath/read$i.xml" ) ) {
                 if ( not open( XMLFILE, "gzip -dc $xmlPath/read$i.xml.gz|" ) ) {
@@ -856,7 +857,7 @@ sub getErrorData {
                 for my $cycle ( $cycleStart .. $cycleEnd
                   )         # a read is a specific range of cycles
                 {
-                    for my $index (@errorArray
+                    for my $index ( @errorArray
                       ) # loops through every error data entry from ErrorMetricOut.bin.json
                     {
                         if (   $index->{cycle} == $cycle
