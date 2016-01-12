@@ -166,7 +166,7 @@ for my $j ( sort keys %jsonHash ) {
 
         print { $instFH{$inst} } $reportFields . "\n";
     }
-
+    #add run to report
     $reportHash{"Run"} = $jsonHash{$j}{"run name"};
 
     # lane is determined from file name or file contents (conventions vary)
@@ -181,6 +181,7 @@ for my $j ( sort keys %jsonHash ) {
         die "Lane not defined in $j\n";
     }
 
+    #determine barcode of sample
     if ( exists $jsonHash{$j}{"barcode"} ) {
         $reportHash{"Barcode"} = $jsonHash{$j}{"barcode"};
     }
@@ -188,14 +189,15 @@ for my $j ( sort keys %jsonHash ) {
         $reportHash{"Barcode"} = "noIndex";
     }
 
+    #add library to report
     $reportHash{"Library"} = $jsonHash{$j}{"library"};
 
     if ( $jsonHash{$j}{"number of ends"} eq "paired end" ) {
-        $reportHash{"Insert Mean"}  = $jsonHash{$j}{"insert mean"};
-        $reportHash{"Insert Stdev"} = $jsonHash{$j}{"insert stdev"};
+        $reportHash{"Insert Mean"}  = $jsonHash{$j}{"insert mean"};    #add insert mean column into report
+        $reportHash{"Insert Stdev"} = $jsonHash{$j}{"insert stdev"};   #add insert stdev column into report
         $reportHash{"Read Length"} =
             $jsonHash{$j}{"read 1 average length"} . "/"
-          . $jsonHash{$j}{"read 2 average length"};
+          . $jsonHash{$j}{"read 2 average length"};		       #add read length into report representing reads 1 and 2
     }
     else {
         $reportHash{"Insert Mean"}  = "n/a";
@@ -294,6 +296,7 @@ for my $j ( sort keys %jsonHash ) {
             $i++;
         }
 
+#read 2 doesn't exist
         if ( $i == 2 ) {
             warn "Couldn't open [$xmlPath/read2.xml]\n";
 
@@ -493,8 +496,8 @@ for my $j ( sort keys %jsonHash ) {
       $jsonHash{$j}{"qual fail reads"};
 
     if ( $rawReads > 0 ) {
-        $mapRate = ( $jsonHash{$j}{"mapped reads"} / $rawReads );
-        $reportHash{"Uniquely Mapped %"} = $mapRate;
+        $mapRate = ( $jsonHash{$j}{"mapped reads"} / $rawReads );   #mapped reads/total reads
+        $reportHash{"Uniquely Mapped %"} = $mapRate;		    #add uniquely mapped % into the report
     }
     else {
         $reportHash{"Uniquely Mapped %"} = "0";
@@ -519,7 +522,7 @@ for my $j ( sort keys %jsonHash ) {
     }
 
     if ( $qTotal > 0 ) {
-        $reportHash{"R1 % >= q30"} = $qOver30 / $qTotal;
+        $reportHash{"R1 % >= q30"} = $qOver30 / $qTotal;	     #report percent of read qualities over 30 for R1
     }
     else {
         $reportHash{"R1 % >= q30"} = "n/a";
@@ -535,7 +538,7 @@ for my $j ( sort keys %jsonHash ) {
     }
 
     if ( $qTotal > 0 ) {
-        $reportHash{"R2 % >= q30"} = $qOver30 / $qTotal;
+        $reportHash{"R2 % >= q30"} = $qOver30 / $qTotal;	     #report percent of read qualities over 30 for R2
     }
     else {
         $reportHash{"R2 % >= q30"} = "n/a";
@@ -568,7 +571,7 @@ for my $j ( sort keys %jsonHash ) {
         $R2errorRate = "n/a";
     }
 
-    $reportHash{"R1 Error %"} = $R1errorRate;
+    $reportHash{"R1 Error %"} = $R1errorRate;    
     $reportHash{"R2 Error %"} = $R2errorRate;
 
     # soft clip errors
@@ -609,8 +612,10 @@ for my $j ( sort keys %jsonHash ) {
     $reportHash{"R1 Soft Clip %"} = $R1softClipRate;
     $reportHash{"R2 Soft Clip %"} = $R2softClipRate;
 
+    #add estimated reads per start point
     $reportHash{"Est Reads/SP"} = $jsonHash{$j}{"reads per start point"};
 
+    #calculate percent of reads on target to total mapped reads
     if ( $jsonHash{$j}{"mapped reads"} > 0 ) {
         $onTargetRate =
           ( $jsonHash{$j}{"reads on target"} / $jsonHash{$j}{"mapped reads"} );
@@ -618,6 +623,8 @@ for my $j ( sort keys %jsonHash ) {
     else {
         $onTargetRate = "n/a";
     }
+
+    #calculate estimated yield value = (number of aligned bases * percent of reads on target) / number of reads per start point
     if (    ( $jsonHash{$j}{"reads per start point"} > 0 )
         and ( $onTargetRate ne "n/a" ) )
     {
@@ -628,6 +635,8 @@ for my $j ( sort keys %jsonHash ) {
     else {
         $estimatedYield = "n/a";
     }
+
+    #calculate estimated coverage = estimated yield value/target size
     if ( $estimatedYield ne "n/a" ) {
         $estimatedCoverage = $estimatedYield / $jsonHash{$j}{"target size"};
     }
@@ -684,6 +693,7 @@ sub determineLane {
     return ( $lane, $reportHashLane );
 }
 
+#counts total number of reading errors of a cycle based on either mismatch, insertion, or deletion errors
 sub byCycleToCount {
     my $histRef = $_[0];
 
@@ -694,6 +704,7 @@ sub byCycleToCount {
     return $sum;
 }
 
+#prints timestamp from JSON file into desired output file
 sub printTimeStamp {
     my ( $outputDir, $targetFile, $timeStamp ) = @_;
     open( FILEHANDLE, ">>$outputDir/$targetFile" );
