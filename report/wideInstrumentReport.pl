@@ -210,6 +210,10 @@ for my $j ( sort keys %jsonHash ) {
         $xmlPath    = "/oicr/data/archive/$1/$2/Data/reports/Summary";
         $runxmlPath = "/oicr/data/archive/$1/$2";
     }
+    elsif( $j =~ /^(.+)\/jsonReport\/([^\/]+)$/) {  #for files outside the /oicr/data/archive
+	$xmlPath    = "";	
+	$runxmlPath = $1;
+    }
     else {
         die
 "Input string $j doesn't match /oicr/data/archive/*/*/jsonReport during parsing for xml path.\n";
