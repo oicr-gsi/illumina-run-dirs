@@ -279,7 +279,8 @@ for my $j ( sort keys %jsonHash ) {
 	    $inst = $jsonHash{$j}{"instrument"};
 
 	    if ( defined $inst ) {
-		$inst =~ s/SN/h/;
+			$inst =~ s/SN/h/ if $inst =~ /^\w{2}\d{3}$/;
+			$inst =~ s/SN700/h/ if $inst =~ /^\w{2}\d{7}$/;
 	    }
 	    else {
 		$inst = "InstrumentMissing";
@@ -344,7 +345,12 @@ for my $j ( sort keys %jsonHash ) {
 				$instrument = "m" . substr($instrument, 3);
 			}
 			elsif ( $instrument =~ /^SN/ ) {
-				$instrument = "h" . substr($instrument, 2);
+				if ( $instrument =~ /\w{2}\d{7}/ ) {
+					$instrument = "h" . substr($instrument, 5);
+				}
+				elsif ( $instrument =~ /\w{2}\d{3}/ ) {
+					$instrument = "h" . substr($instrument, 2);
+				}
 			}
 			$xmlPath    = "/oicr/data/archive/$instrument/$runName/Data/reports/Summary";
 			$runxmlPath = "/oicr/data/archive/$instrument/$runName";
