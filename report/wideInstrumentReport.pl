@@ -22,6 +22,7 @@ my $logtime    = strftime( '%Y-%m-%d', localtime );
 # Loops through input arguments and sorts filenames from variables
 # If input is a JSON file, file is decoded into perl hash
 # If input is an xml file, file remains unchanged but is added to jsonHash to be interpreted
+# If input is seqware_files_report_<date>.gz file provenance report, extract json files
 for $file (@jsonFiles) {
     if ( $file =~ /\d{6} \d{2}\:\d{2} \w{3} \w{3}/ ) {
         $timeStamp = $file;
@@ -36,6 +37,36 @@ for $file (@jsonFiles) {
     elsif ( $file =~ /.csv/ ) {
         $fileSuffix = $file;
     }
+    # From the file provenance report, extract the json files
+    elsif ( $file =~ /seqware\_files\_report/ ) {
+        if ( not open( FPR, $file ) ) {
+			if ( not open( FPR, "gzip -dc $file|" ) ) {
+				print("$logtime Missing $file");
+			}
+		}
+		while ( my $l = <FPR> ) {
+			if ( $l =~ /(\/oicr\/data\/archive\/.*\.json)/ ) {
+				my $jsonFile = $1;
+				if ( open( FILE, $jsonFile ) ) {
+					if ($line = <FILE> ) {
+						$jsonHash{$jsonFile} = decode_json($line);
+					}
+					else {
+						warn "No data found in $jsonFile\n";
+					}
+					close FILE;
+				}
+				elsif ( $file =~ /\*/ ) {
+					warn "No JSON Reports Found in $jsonFile\n";
+				}
+				else {
+					warn "Couldn't open $jsonFile\n";
+				}
+			}
+		}
+		close FPR;
+	}
+	# If given json file path directly
     elsif ( $file =~ /.json/ ) {
         if ( open( FILE, $file ) ) {
             if ( $line = <FILE> ) {
@@ -153,7 +184,7 @@ my $Source;
 for my $j ( sort keys %jsonHash ) {
     %reportHash = ();
 
-#For files without an associated json
+	#For files without an associated json
     if ( $j =~ /(.+)\/.+\.xml$/ ) {
         $xmlPath    = "";
         $runxmlPath = $1;
@@ -165,8 +196,8 @@ for my $j ( sort keys %jsonHash ) {
 
         #Extract the hard values from the xml
         my $line;
-	my @lanes;
-	my @blankFields = ( "Barcode" , "Library" , "Uniquely Mapped %" , "R1 % >= q30" 
+		my @lanes;
+		my @blankFields = ( "Barcode" , "Library" , "Uniquely Mapped %" , "R1 % >= q30" 
 				, "R2 % >= q30" , "R1 Error %" , "R2 Error %" , "R1 Soft Clip %"
 				, "R2 Soft Clip %" , "Est Reads/SP" , "% on Target" , "Est Yield"
 				, "Est Coverage" , "Coverage Target" );
@@ -243,7 +274,7 @@ for my $j ( sort keys %jsonHash ) {
 	    iterateReportHash( $instFH{$inst}, \%reportHash, \@sourceFile );
 	}
     }
-# If input file is a json file
+	# If input file is a json file
     else{
 	    $inst = $jsonHash{$j}{"instrument"};
 
@@ -302,18 +333,30 @@ for my $j ( sort keys %jsonHash ) {
 	    }
 
 	    # parsing illumina InterOp/SAV stuff here
-	    if ( $j =~ /\/oicr\/data\/archive\/(.*?)\/(.*?)\/jsonReport/ ) {
-		$xmlPath    = "/oicr/data/archive/$1/$2/Data/reports/Summary";
-		$runxmlPath = "/oicr/data/archive/$1/$2";
-	    }
-	    elsif( $j =~ /^(.+)\/jsonReport\/([^\/]+)$/) {  #for files outside the /oicr/data/archive
+		if ( $j =~ /\/oicr\/data\/archive\/.*\.json/){
+			my $instrument = $jsonHash{$j}{"instrument"};
+			my $runName = $jsonHash{$j}{"run name"};
+			# need to adjust instrument name to directory name
+			if ( $instrument =~ /^(h|i)/i ) {
+				$instrument = lc $instrument;
+			}
+			elsif ( $instrument =~ /^m/i ) {
+				$instrument = "m" . substr($instrument, 3);
+			}
+			elsif ( $instrument =~ /^SN/ ) {
+				$instrument = "h" . substr($instrument, 2);
+			}
+			$xmlPath    = "/oicr/data/archive/$instrument/$runName/Data/reports/Summary";
+			$runxmlPath = "/oicr/data/archive/$instrument/$runName";
+		}
+		elsif( $j =~ /^(.+)\/jsonReport\/([^\/]+)$/) {  #for files outside the /oicr/data/archive
 		$xmlPath    = "";	
 		$runxmlPath = $1;
-	    }
-	    else {
-		die
+		}
+		else {
+			die
 	"Input string $j doesn't match /oicr/data/archive/*/*/jsonReport during parsing for xml path.\n";
-	    }
+		}
 
 	    # read XML are parsed if available
 	    if ( -d "$xmlPath" ) {
@@ -1225,4 +1268,3 @@ sub jsonBinDirectoryCheck {
         `oicr_illuminaSAV_bin_to_json.pl --runDir $runxmlPath`;
     }
 }
-
