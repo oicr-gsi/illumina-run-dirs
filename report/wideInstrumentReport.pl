@@ -21,6 +21,8 @@ my $logtime    = strftime( '%Y-%m-%d', localtime );
 
 # Loops through input arguments and sorts filenames from variables
 # If input is a JSON file, file is decoded into perl hash
+# If input is an xml file, file remains unchanged but is added to jsonHash to be interpreted
+# If input is seqware_files_report_<date>.gz file provenance report, extract json files
 for $file (@jsonFiles) {
     if ( $file =~ /\d{6} \d{2}\:\d{2} \w{3} \w{3}/ ) {
         $timeStamp = $file;
@@ -35,6 +37,36 @@ for $file (@jsonFiles) {
     elsif ( $file =~ /.csv/ ) {
         $fileSuffix = $file;
     }
+    # From the file provenance report, extract the json files
+    elsif ( $file =~ /seqware\_files\_report/ ) {
+        if ( not open( FPR, $file ) ) {
+			if ( not open( FPR, "gzip -dc $file|" ) ) {
+				print("$logtime Missing $file");
+			}
+		}
+		while ( my $l = <FPR> ) {
+			if ( $l =~ /(\/oicr\/data\/archive\/.*\.json)/ ) {
+				my $jsonFile = $1;
+				if ( open( FILE, $jsonFile ) ) {
+					if ($line = <FILE> ) {
+						$jsonHash{$jsonFile} = decode_json($line);
+					}
+					else {
+						warn "No data found in $jsonFile\n";
+					}
+					close FILE;
+				}
+				elsif ( $file =~ /\*/ ) {
+					warn "No JSON Reports Found in $jsonFile\n";
+				}
+				else {
+					warn "Couldn't open $jsonFile\n";
+				}
+			}
+		}
+		close FPR;
+	}
+	# If given json file path directly
     elsif ( $file =~ /.json/ ) {
         if ( open( FILE, $file ) ) {
             if ( $line = <FILE> ) {
@@ -51,6 +83,9 @@ for $file (@jsonFiles) {
         else {
             warn "Couldn't open $file\n";
         }
+    }
+    elsif ($file =~ /.xml/ ) {
+		$jsonHash{$file} = $file;
     }
     else {
         $outputDir = $file;
@@ -149,513 +184,593 @@ my $Source;
 for my $j ( sort keys %jsonHash ) {
     %reportHash = ();
 
-    $inst = $jsonHash{$j}{"instrument"};
+	#For files without an associated json
+    if ( $j =~ /(.+)\/.+\.xml$/ ) {
+        $xmlPath    = "";
+        $runxmlPath = $1;
 
-    if ( defined $inst ) {
-        $inst =~ s/SN/h/;
-    }
-    else {
-        $inst = "InstrumentMissing";
-    }
+        jsonBinDirectoryCheck($runxmlPath);
 
-    $fileName = $filePrefix . $inst . $fileSuffix;
-    unless ( exists $instFH{$inst} ) {
-        open( FILE, ">$outputDir/$fileName" )
-          or die "Couldn't open $fileName for write.\n";
-        $instFH{$inst} = \*FILE;
+        ( $read1, $read2, $metricHashref, $errorHashref ) =
+          getBinaryData($runxmlPath);
 
-        print { $instFH{$inst} } $reportFields . "\n";
-    }
-    #add run to report
-    $reportHash{"Run"} = $jsonHash{$j}{"run name"};
-
-    # lane is determined from file name or file contents (conventions vary)
-    if ( exists $jsonHash{$j}{"lane"} ) {
-        ( $lane, $reportHash{"Lane"} ) =
-          determineLane( $j, $jsonHash{$j}{"lane"}, $outputDir );
-    }
-    else {
-        open( MissingLane, ">$outputDir/missing_lane.txt" );
-        print MissingLane "$logtime Lane not defined in $j\n";
-        close MissingLane;
-        die "Lane not defined in $j\n";
-    }
-
-    #determine barcode of sample
-    if ( exists $jsonHash{$j}{"barcode"} ) {
-        $reportHash{"Barcode"} = $jsonHash{$j}{"barcode"};
-    }
-    else {
-        $reportHash{"Barcode"} = "noIndex";
-    }
-
-    #add library to report
-    $reportHash{"Library"} = $jsonHash{$j}{"library"};
-
-    if ( $jsonHash{$j}{"number of ends"} eq "paired end" ) {
-        $reportHash{"Insert Mean"}  = $jsonHash{$j}{"insert mean"};    #add insert mean column into report
-        $reportHash{"Insert Stdev"} = $jsonHash{$j}{"insert stdev"};   #add insert stdev column into report
-        $reportHash{"Read Length"} =
-            $jsonHash{$j}{"read 1 average length"} . "/"
-          . $jsonHash{$j}{"read 2 average length"};		       #add read length into report representing reads 1 and 2
-    }
-    else {
-        $reportHash{"Insert Mean"}  = "n/a";
-        $reportHash{"Insert Stdev"} = "n/a";
-        $reportHash{"Read Length"}  = $jsonHash{$j}{"read ? average length"};
-    }
-
-    # parsing illumina InterOp/SAV stuff here
-    if ( $j =~ /\/oicr\/data\/archive\/(.*?)\/(.*?)\/jsonReport/ ) {
-        $xmlPath    = "/oicr/data/archive/$1/$2/Data/reports/Summary";
-        $runxmlPath = "/oicr/data/archive/$1/$2";
-    }
-    elsif( $j =~ /^(.+)\/jsonReport\/([^\/]+)$/) {  #for files outside the /oicr/data/archive
-	$xmlPath    = "";	
-	$runxmlPath = $1;
-    }
-    else {
-        die
-"Input string $j doesn't match /oicr/data/archive/*/*/jsonReport during parsing for xml path.\n";
-    }
-
-    # read XML are parsed if available
-    if ( -d "$xmlPath" ) {
-
-        # read1.xml is checked for existence, opened, and parsed
-        # error messages are output accordingly
-        if ( -e "$xmlPath/read1.xml" or -e "$xmlPath/read1.xml.gz" ) {
-            if ( not open( XMLFILE, "$xmlPath/read1.xml" ) ) {
-                if ( not open( XMLFILE, "gzip -dc $xmlPath/read1.xml.gz|" ) ) {
-                    print(
-                        "$logtime Missing $xmlPath/read1.xml or read1.xml.gz");
-                }
+        #Extract the hard values from the xml
+        my $line;
+		my @lanes;
+		my @blankFields = ( "Barcode" , "Library" , "Uniquely Mapped %" , "R1 % >= q30" 
+				, "R2 % >= q30" , "R1 Error %" , "R2 Error %" , "R1 Soft Clip %"
+				, "R2 Soft Clip %" , "Est Reads/SP" , "% on Target" , "Est Yield"
+				, "Est Coverage" , "Coverage Target" );
+		
+        if ( not open( XML, "$runxmlPath/RunInfo.xml" ) ) {
+            if ( not open( XML, "gzip -dc $runxmlPath/RunInfo.xml.gz|" ) ) {
+                print(
+                    "$logtime Missing $runxmlPath/RunInfo.xml or RunInfo.xml.gz"
+                );
             }
+        }
 
-            while ( $l = <XMLFILE> )    # should just be one line...
-            {
-                if ( $l =~
-/<Lane key="$lane".*?TileCount="(.*?)".*?ClustersRaw="(.*?)".*?PrcPFClusters="(.*?)".*?Phasing="(.*?)" Prephasing="(.*?)".*?ErrRatePhiX="(.*?)" ErrRatePhiXSD="(.*?)"/
-                  )
-                {
-                    # data is classified as XML
-                    $reportHash{"XML"}{"# Raw Clusters"}    = $1 * $2;
-                    $reportHash{"XML"}{"PF %"}              = $3;
-                    $reportHash{"XML"}{"R1 Phasing"}        = $4;
-                    $reportHash{"XML"}{"R1 Prephasing"}     = $5;
-                    $reportHash{"XML"}{"R1 PhiX Error %"}   = $6;
-                    $reportHash{"XML"}{"R1phixErrorRateSD"} = $7;
-                }
+        while ( $line = <XML> ) {
+            if ( $line =~ /<Instrument>(.*?)<.*>/ ) {
+                $inst = $1;
             }
-            close XMLFILE;
-            open( XMLPATH, ">>$outputDir/xml_present.txt" );
-            print XMLPATH "$logtime $xmlPath/read1.xml\n";
-            close XMLPATH;
-        }
-        elsif ( $xmlpathPrev ne $xmlPath ) {
-            open( NOXMLPATH, ">>$outputDir/xml_missing.txt" );
-            print NOXMLPATH "$logtime Couldn't Find [$xmlPath/read1.xml]\n";
-            print NOXMLPATH "$logtime $xmlpathPrev\n";
-            close NOXMLPATH;
-        }
-        $i = 2;
-
-# open read files until you find the last one (which is hopefully read 2)
-# Opens and parses read2.xml if it exists
-# read number is incremented - the highest read XML will contain the values for read2
-        while ( -e "$xmlPath/read$i.xml" or -e "$xmlPath/read$i.xml.gz" ) {
-            if ( not open( XMLFILE, "$xmlPath/read$i.xml" ) ) {
-                if ( not open( XMLFILE, "gzip -dc $xmlPath/read$i.xml.gz|" ) ) {
-                    print(
-                        "$logtime Missing $xmlPath/read$i.xml or read$i.xml.gz"
-                    );
-
-             # assigns 'n/a' in place of missing data if read2.xml doesn't exist
-                    $reportHash{"XML"}{"R2 Phasing"}        = "n/a";
-                    $reportHash{"XML"}{"R2 Prephasing"}     = "n/a";
-                    $reportHash{"XML"}{"R2 PhiX Error %"}   = "n/a";
-                    $reportHash{"XML"}{"R2phixErrorRateSD"} = "n/a";
-                }
+            elsif ( $line =~ /<Run.* Id="(.*?)".*>/ ) {
+                $reportHash{"Run"} = $1;
             }
-
-            while ( $l = <XMLFILE> )    # should just be one line...
-            {
-                while ( $l =~
-/<Lane key="$lane".*?TileCount="(.*?)".*?ClustersRaw="(.*?)".*?PrcPFClusters="(.*?)".*?Phasing="(.*?)" Prephasing="(.*?)".*?ErrRatePhiX="(.*?)" ErrRatePhiXSD="(.*?)".*>/g
-                  )
-                {
-                    # data is classified as XML
-                    $reportHash{"XML"}{"R2 Phasing"}        = $4;
-                    $reportHash{"XML"}{"R2 Prephasing"}     = $5;
-                    $reportHash{"XML"}{"R2 PhiX Error %"}   = $6;
-                    $reportHash{"XML"}{"R2phixErrorRateSD"} = $7;
-                }
-            }
-            close XMLFILE;
-
-            open( XMLPATH, ">>$outputDir/xml_present.txt" );
-            print XMLPATH "$xmlPath/read$i.xml\n";
-            close XMLPATH;
-
-            $i++;
+            elsif ( $line =~ /<Lane>(.*?)<.*>/ ) {
+                push @lanes, $1;
+	    }
         }
+        
+        #Open a file for writing
+        $fileName = $filePrefix . $inst . $fileSuffix;
+        unless ( exists $instFH{$inst} ) {
+            open( FILE, ">$outputDir/$fileName" )
+              or die "Couldn't open $fileName for write.\n";
+            $instFH{$inst} = \*FILE;
 
-#read 2 doesn't exist
-        if ( $i == 2 ) {
-            warn "Couldn't open [$xmlPath/read2.xml]\n";
-
-            # assigns 'n/a' in place of missing data if read2.xml doesn't exist
-            $reportHash{"XML"}{"R2 Phasing"}        = "n/a";
-            $reportHash{"XML"}{"R2 Prephasing"}     = "n/a";
-            $reportHash{"XML"}{"R2 PhiX Error %"}   = "n/a";
-            $reportHash{"XML"}{"R2phixErrorRateSD"} = "n/a";
-
-            open( NOXMLPATH, ">>$outputDir/xml_missing.txt" );
-            print NOXMLPATH "$logtime Couldn't Find [$xmlPath/read2.xml]\n";
-
-            print NOXMLPATH "$logtime $xmlpathPrev\n";
-            close NOXMLPATH;
+            print { $instFH{$inst} } $reportFields . "\n";
         }
+        
+        #Each run has different associated values per lane
+        foreach my $lane ( @lanes ) {
+	    $reportHash{"Lane"} = $lane;
+	    foreach my $field( @blankFields ) { #initialize blank fields to avoid error messages
+		$reportHash{$field} = "";
+	    }
+	    $reportHash{"BIN"}{"R1 Phasing"} =
+	        $metricHashref->{$lane}{ ( 200 + ( $read1 - 1 ) * 2 ) }
+		{value};
+	    $reportHash{"BIN"}{"R1 Prephasing"} =
+	        $metricHashref->{$lane}{ ( 201 + ( $read1 - 1 ) * 2 ) }
+		{value};
+	    $reportHash{"BIN"}{"R1 PhiX Error %"} =
+		$errorHashref->{$lane}{$read1}{value};
 
-        $reportHash{"XML"}{"Source"} = "Read XML";
-    }    #end if XML
-    elsif ( $xmlpathPrev ne $xmlPath ) {
-        open( NOXMLPATH, ">>$outputDir/xml_missing.txt" );
-        print NOXMLPATH "$logtime Couldn't Find [$xmlPath/read1.xml]\n";
-        print NOXMLPATH "$logtime Couldn't Find [$xmlPath/read2.xml]\n";
-        close NOXMLPATH;
+	    $reportHash{"BIN"}{"R2 Phasing"} =
+	        $metricHashref->{$lane}{ ( 200 + ( $read2 - 1 ) * 2 ) }
+		{value};
+	    $reportHash{"BIN"}{"R2 Prephasing"} =
+	        $metricHashref->{$lane}{ ( 201 + ( $read2 - 1 ) * 2 ) }
+		{value};
+	    $reportHash{"BIN"}{"R2 PhiX Error %"} =
+	        $errorHashref->{$lane}{$read2}{value};
+
+	    $reportHash{"BIN"}{"# Raw Clusters"} =
+	        $metricHashref->{$lane}{102}{value};
+
+	    # PF % = (# clusters passing filters) / (total cluster) * 100
+	    $reportHash{"BIN"}{"PF %"} =
+		( $metricHashref->{$lane}{103}{value} /
+			$metricHashref->{$lane}{102}{value} ) * 100
+		if $metricHashref->{$lane}{102}{value};
+
+	    $reportHash{"BIN"}{"Source"} = "Binary";
+
+	    # reports instances of 'not a number' values in comments
+	    $reportHash{"Comments"} =
+		checkNAN($metricHashref) . " - " . checkNAN($errorHashref);
+			
+	    iterateReportHash( $instFH{$inst}, \%reportHash, \@sourceFile );
+	}
     }
+	# If input file is a json file
+    else{
+	    $inst = $jsonHash{$j}{"instrument"};
 
-    # InterOp/SAV binary files are parsed if available
-    # Both TileMetricOut and ErrorMetricOut must exist for a full dataset
-    if (   -e "$runxmlPath/InterOp/TileMetricsOut.bin"
-        && -e "$runxmlPath/InterOp/ErrorMetricsOut.bin" )
-    {
+	    if ( defined $inst ) {
+			$inst =~ s/SN/h/ if $inst =~ /^\w{2}\d{3}$/;
+			$inst =~ s/SN700/h/ if $inst =~ /^\w{2}\d{7}$/;
+	    }
+	    else {
+		$inst = "InstrumentMissing";
+	    }
 
-        # Retrieves binary data for each different run
-        if ( $runPrev ne $jsonHash{$j}{"run name"} ) {
+	    $fileName = $filePrefix . $inst . $fileSuffix;
+	    unless ( exists $instFH{$inst} ) {
+		open( FILE, ">$outputDir/$fileName" )
+		  or die "Couldn't open $fileName for write.\n";
+		$instFH{$inst} = \*FILE;
 
-            # checks for and creates any missing InterOp/SAV JSON data
-            if ( !-d "$runxmlPath/InterOp/JSON" ) {
+		print { $instFH{$inst} } $reportFields . "\n";
+	    }
+	    #add run to report
+	    $reportHash{"Run"} = $jsonHash{$j}{"run name"};
 
-# if file system is read-only creates temp directory for JSON output
-#$outDir = determineJsonOutDir($runxmlPath, $reportHash{"Run"});
-# Target outDir for JSON files no longer supported - if create JSON below fails, error logged
+	    # lane is determined from file name or file contents (conventions vary)
+	    if ( exists $jsonHash{$j}{"lane"} ) {
+		( $lane, $reportHash{"Lane"} ) =
+		  determineLane( $j, $jsonHash{$j}{"lane"}, $outputDir );
+	    }
+	    else {
+		open( MissingLane, ">$outputDir/missing_lane.txt" );
+		print MissingLane "$logtime Lane not defined in $j\n";
+		close MissingLane;
+		die "Lane not defined in $j\n";
+	    }
 
-                # creates JSON directory
-                `oicr_illuminaSAV_bin_to_json.pl --runDir $runxmlPath`;
-            }
-            elsif (!-e "$runxmlPath/InterOp/JSON/TileMetricsOut.bin.json"
-                && !-e "$runxmlPath/InterOp/JSON/ErrorMetricsOut.bin.json" )
-            {
-# if file system is read-only creates temp directory for JSON output
-#$outDir = determineJsonOutDir($runxmlPath, $reportHash{"Run"});
-# Target outDir for JSON files no longer supported - if create JSON below fails, error logged
+	    #determine barcode of sample
+	    if ( exists $jsonHash{$j}{"barcode"} ) {
+		$reportHash{"Barcode"} = $jsonHash{$j}{"barcode"};
+	    }
+	    else {
+		$reportHash{"Barcode"} = "noIndex";
+	    }
 
-            # creates necessary JSON files if they don't exist in JSON directory
-                `oicr_illuminaSAV_bin_to_json.pl --runDir $runxmlPath`;
-            }
-            elsif ( ( -e "$runxmlPath/InterOp/JSON/TileMetricsOut.bin.json" ) !=
-                ( -e "$runxmlPath/InterOp/JSON/ErrorMetricsOut.bin.json" ) )
-            {
-# if file system is read-only creates temp directory for JSON output
-#$outDir = determineJsonOutDir($runxmlPath, $reportHash{"Run"});
-# Target outDir for JSON files no longer supported - if create JSON below fails, error logged
+	    #add library to report
+	    $reportHash{"Library"} = $jsonHash{$j}{"library"};
 
-    # removes JSON dir and recreates JSON dir contents of one JSON doesn't exist
-                `rm -r $runxmlPath/InterOp/JSON;`;
-                `oicr_illuminaSAV_bin_to_json.pl --runDir $runxmlPath`;
-            }
+	    if ( $jsonHash{$j}{"number of ends"} eq "paired end" ) {
+		$reportHash{"Insert Mean"}  = $jsonHash{$j}{"insert mean"};    #add insert mean column into report
+		$reportHash{"Insert Stdev"} = $jsonHash{$j}{"insert stdev"};   #add insert stdev column into report
+		$reportHash{"Read Length"} =
+		    $jsonHash{$j}{"read 1 average length"} . "/"
+		  . $jsonHash{$j}{"read 2 average length"};		       #add read length into report representing reads 1 and 2
+	    }
+	    else {
+		$reportHash{"Insert Mean"}  = "n/a";
+		$reportHash{"Insert Stdev"} = "n/a";
+		$reportHash{"Read Length"}  = $jsonHash{$j}{"read ? average length"};
+	    }
 
-            # retrieves data from InterOp/SAV files and read information
-            ( $read1, $read2, $metricHashref, $errorHashref ) =
-              getBinaryData($runxmlPath);
+	    # parsing illumina InterOp/SAV stuff here
+		if ( $j =~ /\/oicr\/data\/archive\/.*\.json/){
+			my $instrument = $jsonHash{$j}{"instrument"};
+			my $runName = $jsonHash{$j}{"run name"};
+			# need to adjust instrument name to directory name
+			if ( $instrument =~ /^(h|i)/i ) {
+				$instrument = lc $instrument;
+			}
+			elsif ( $instrument =~ /^m/i ) {
+				$instrument = "m" . substr($instrument, 3);
+			}
+			elsif ( $instrument =~ /^SN/ ) {
+				if ( $instrument =~ /\w{2}\d{7}/ ) {
+					$instrument = "h" . substr($instrument, 5);
+				}
+				elsif ( $instrument =~ /\w{2}\d{3}/ ) {
+					$instrument = "h" . substr($instrument, 2);
+				}
+			}
+			$xmlPath    = "/oicr/data/archive/$instrument/$runName/Data/reports/Summary";
+			$runxmlPath = "/oicr/data/archive/$instrument/$runName";
+		}
+		elsif( $j =~ /^(.+)\/jsonReport\/([^\/]+)$/) {  #for files outside the /oicr/data/archive
+		$xmlPath    = "";	
+		$runxmlPath = $1;
+		}
+		else {
+			die
+	"Input string $j doesn't match /oicr/data/archive/*/*/jsonReport during parsing for xml path.\n";
+		}
 
-        }
+	    # read XML are parsed if available
+	    if ( -d "$xmlPath" ) {
 
-# assigns retrieved data to the report hash classified as BIN data
-# metric codes correspond to different metric values based on the value of read1 and read2
-# More info - refer to Tile Metric Code Legend above or illumina's RTA Theory of Operations documentation
-        $reportHash{"BIN"}{"R1 Phasing"} =
-          $metricHashref->{$lane}{ ( 200 + ( $read1 - 1 ) * 2 ) }{value};
-        $reportHash{"BIN"}{"R1 Prephasing"} =
-          $metricHashref->{$lane}{ ( 201 + ( $read1 - 1 ) * 2 ) }{value};
-        $reportHash{"BIN"}{"R1 PhiX Error %"} =
-          $errorHashref->{$lane}{$read1}{value};
+		# read1.xml is checked for existence, opened, and parsed
+		# error messages are output accordingly
+		if ( -e "$xmlPath/read1.xml" or -e "$xmlPath/read1.xml.gz" ) {
+		    if ( not open( XMLFILE, "$xmlPath/read1.xml" ) ) {
+		        if ( not open( XMLFILE, "gzip -dc $xmlPath/read1.xml.gz|" ) ) {
+		            print(
+		                "$logtime Missing $xmlPath/read1.xml or read1.xml.gz");
+		        }
+		    }
 
-        $reportHash{"BIN"}{"R2 Phasing"} =
-          $metricHashref->{$lane}{ ( 200 + ( $read2 - 1 ) * 2 ) }{value};
-        $reportHash{"BIN"}{"R2 Prephasing"} =
-          $metricHashref->{$lane}{ ( 201 + ( $read2 - 1 ) * 2 ) }{value};
-        $reportHash{"BIN"}{"R2 PhiX Error %"} =
-          $errorHashref->{$lane}{$read2}{value};
+		    while ( $l = <XMLFILE> )    # should just be one line...
+		    {
+		        if ( $l =~
+	/<Lane key="$lane".*?TileCount="(.*?)".*?ClustersRaw="(.*?)".*?PrcPFClusters="(.*?)".*?Phasing="(.*?)" Prephasing="(.*?)".*?ErrRatePhiX="(.*?)" ErrRatePhiXSD="(.*?)"/
+		          )
+		        {
+		            # data is classified as XML
+		            $reportHash{"XML"}{"# Raw Clusters"}    = $1 * $2;
+		            $reportHash{"XML"}{"PF %"}              = $3;
+		            $reportHash{"XML"}{"R1 Phasing"}        = $4;
+		            $reportHash{"XML"}{"R1 Prephasing"}     = $5;
+		            $reportHash{"XML"}{"R1 PhiX Error %"}   = $6;
+		            $reportHash{"XML"}{"R1phixErrorRateSD"} = $7;
+		        }
+		    }
+		    close XMLFILE;
+		    open( XMLPATH, ">>$outputDir/xml_present.txt" );
+		    print XMLPATH "$logtime $xmlPath/read1.xml\n";
+		    close XMLPATH;
+		}
+		elsif ( $xmlpathPrev ne $xmlPath ) {
+		    open( NOXMLPATH, ">>$outputDir/xml_missing.txt" );
+		    print NOXMLPATH "$logtime Couldn't Find [$xmlPath/read1.xml]\n";
+		    print NOXMLPATH "$logtime $xmlpathPrev\n";
+		    close NOXMLPATH;
+		}
+		$i = 2;
 
-        $reportHash{"BIN"}{"# Raw Clusters"} =
-          $metricHashref->{$lane}{102}{value};
+	# open read files until you find the last one (which is hopefully read 2)
+	# Opens and parses read2.xml if it exists
+	# read number is incremented - the highest read XML will contain the values for read2
+		while ( -e "$xmlPath/read$i.xml" or -e "$xmlPath/read$i.xml.gz" ) {
+		    if ( not open( XMLFILE, "$xmlPath/read$i.xml" ) ) {
+		        if ( not open( XMLFILE, "gzip -dc $xmlPath/read$i.xml.gz|" ) ) {
+		            print(
+		                "$logtime Missing $xmlPath/read$i.xml or read$i.xml.gz"
+		            );
 
-        # PF % = (# clusters passing filters) / (total cluster) * 100
-        $reportHash{"BIN"}{"PF %"} =
-          ( $metricHashref->{$lane}{103}{value} /
-              $metricHashref->{$lane}{102}{value} ) * 100
-          if $metricHashref->{$lane}{102}{value};
+		     # assigns 'n/a' in place of missing data if read2.xml doesn't exist
+		            $reportHash{"XML"}{"R2 Phasing"}        = "n/a";
+		            $reportHash{"XML"}{"R2 Prephasing"}     = "n/a";
+		            $reportHash{"XML"}{"R2 PhiX Error %"}   = "n/a";
+		            $reportHash{"XML"}{"R2phixErrorRateSD"} = "n/a";
+		        }
+		    }
 
-        $reportHash{"BIN"}{"Source"} = "Binary";
+		    while ( $l = <XMLFILE> )    # should just be one line...
+		    {
+		        while ( $l =~
+	/<Lane key="$lane".*?TileCount="(.*?)".*?ClustersRaw="(.*?)".*?PrcPFClusters="(.*?)".*?Phasing="(.*?)" Prephasing="(.*?)".*?ErrRatePhiX="(.*?)" ErrRatePhiXSD="(.*?)".*>/g
+		          )
+		        {
+		            # data is classified as XML
+		            $reportHash{"XML"}{"R2 Phasing"}        = $4;
+		            $reportHash{"XML"}{"R2 Prephasing"}     = $5;
+		            $reportHash{"XML"}{"R2 PhiX Error %"}   = $6;
+		            $reportHash{"XML"}{"R2phixErrorRateSD"} = $7;
+		        }
+		    }
+		    close XMLFILE;
 
-        # reports instances of 'not a number' values in comments
-        $reportHash{"Comments"} =
-          checkNAN($metricHashref) . " - " . checkNAN($errorHashref);
+		    open( XMLPATH, ">>$outputDir/xml_present.txt" );
+		    print XMLPATH "$xmlPath/read$i.xml\n";
+		    close XMLPATH;
 
+		    $i++;
+		}
+
+	#read 2 doesn't exist
+		if ( $i == 2 ) {
+		    warn "Couldn't open [$xmlPath/read2.xml]\n";
+
+		    # assigns 'n/a' in place of missing data if read2.xml doesn't exist
+		    $reportHash{"XML"}{"R2 Phasing"}        = "n/a";
+		    $reportHash{"XML"}{"R2 Prephasing"}     = "n/a";
+		    $reportHash{"XML"}{"R2 PhiX Error %"}   = "n/a";
+		    $reportHash{"XML"}{"R2phixErrorRateSD"} = "n/a";
+
+		    open( NOXMLPATH, ">>$outputDir/xml_missing.txt" );
+		    print NOXMLPATH "$logtime Couldn't Find [$xmlPath/read2.xml]\n";
+
+		    print NOXMLPATH "$logtime $xmlpathPrev\n";
+		    close NOXMLPATH;
+		}
+
+		$reportHash{"XML"}{"Source"} = "Read XML";
+	    }    #end if XML
+	    elsif ( $xmlpathPrev ne $xmlPath ) {
+		open( NOXMLPATH, ">>$outputDir/xml_missing.txt" );
+		print NOXMLPATH "$logtime Couldn't Find [$xmlPath/read1.xml]\n";
+		print NOXMLPATH "$logtime Couldn't Find [$xmlPath/read2.xml]\n";
+		close NOXMLPATH;
+	    }
+
+	    # InterOp/SAV binary files are parsed if available
+	    # Both TileMetricOut and ErrorMetricOut must exist for a full dataset
+	    if (   -e "$runxmlPath/InterOp/TileMetricsOut.bin"
+		&& -e "$runxmlPath/InterOp/ErrorMetricsOut.bin" )
+	    {
+
+		# Retrieves binary data for each different run
+		if ( $runPrev ne $jsonHash{$j}{"run name"} ) {
+
+			jsonBinDirectoryCheck( $runxmlPath );
+
+		        # retrieves data from InterOp/SAV files and read information
+		        ( $read1, $read2, $metricHashref, $errorHashref ) =
+		          getBinaryData($runxmlPath);
+
+		}
+
+	# assigns retrieved data to the report hash classified as BIN data
+	# metric codes correspond to different metric values based on the value of read1 and read2
+	# More info - refer to Tile Metric Code Legend above or illumina's RTA Theory of Operations documentation
+		$reportHash{"BIN"}{"R1 Phasing"} =
+		  $metricHashref->{$lane}{ ( 200 + ( $read1 - 1 ) * 2 ) }{value};
+		$reportHash{"BIN"}{"R1 Prephasing"} =
+		  $metricHashref->{$lane}{ ( 201 + ( $read1 - 1 ) * 2 ) }{value};
+		$reportHash{"BIN"}{"R1 PhiX Error %"} =
+		  $errorHashref->{$lane}{$read1}{value};
+
+		$reportHash{"BIN"}{"R2 Phasing"} =
+		  $metricHashref->{$lane}{ ( 200 + ( $read2 - 1 ) * 2 ) }{value};
+		$reportHash{"BIN"}{"R2 Prephasing"} =
+		  $metricHashref->{$lane}{ ( 201 + ( $read2 - 1 ) * 2 ) }{value};
+		$reportHash{"BIN"}{"R2 PhiX Error %"} =
+		  $errorHashref->{$lane}{$read2}{value};
+
+		$reportHash{"BIN"}{"# Raw Clusters"} =
+		  $metricHashref->{$lane}{102}{value};
+
+		# PF % = (# clusters passing filters) / (total cluster) * 100
+		$reportHash{"BIN"}{"PF %"} =
+		  ( $metricHashref->{$lane}{103}{value} /
+		      $metricHashref->{$lane}{102}{value} ) * 100
+		  if $metricHashref->{$lane}{102}{value};
+
+		$reportHash{"BIN"}{"Source"} = "Binary";
+
+		# reports instances of 'not a number' values in comments
+		$reportHash{"Comments"} =
+		  checkNAN($metricHashref) . " - " . checkNAN($errorHashref);
+
+	    }
+	    elsif ( $runPrev ne $jsonHash{$j}{"run name"} ) {
+
+		# every run any missing InterOp/SAV files are printed to log files
+		# note: only one set of InterOp/SAV files per run
+		if ( !-e "$runxmlPath/InterOp/TileMetricsOut.bin" ) {
+		    open( NOBIN, ">>$outputDir/binary_missing.txt" );
+		    print NOBIN
+	"$logtime Couldn't Find [$runxmlPath/InterOp/TileMetricsOut.bin]\n";
+		    close NOBIN;
+		}
+
+		if ( !-e "$runxmlPath/InterOp/ErrorMetricsOut.bin" ) {
+		    open( NOBIN, ">>$outputDir/binary_missing.txt" );
+		    print NOBIN
+	"$logtime Couldn't Find [$runxmlPath/InterOp/ErrorMetricsOut.bin]\n";
+		    close NOBIN;
+		}
+	    }
+
+	    # determines current status of illumina metric value source files
+	    my $missingBothBin = "true"
+	      if ( !-e "$runxmlPath/InterOp/TileMetricsOut.bin" )
+	      && ( !-e "$runxmlPath/InterOp/TileMetricsOut.bin" );
+	    my $missingOneBin = "true"
+	      if ( !-e "$runxmlPath/InterOp/TileMetricsOut.bin" ) !=
+	      ( !-e "$runxmlPath/InterOp/ErrorMetricsOut.bin" );
+	    my $missingXML     = "true" if ( !-d "$xmlPath" );
+	    my $missingInterOp = "true" if ( !-d "$runxmlPath/InterOp" );
+
+	    # If read XML and one or more InterOp/SAV binaries do not exist
+	    # errors are reported and reportHash values set to 'n/a'
+	    if ( $missingXML && ( $missingOneBin || $missingBothBin ) ) {
+		if ($missingInterOp) {
+		    open( NOBINorXML, ">>$outputDir/binaryxml_missing.txt" );
+		    if ( $runPrev ne $jsonHash{$j}{"run name"} ) {
+		        print NOBINorXML "$logtime Couldn't Find [$xmlPath]\n";
+		        print NOBINorXML
+		          "$logtime Couldn't Find [$runxmlPath/InterOp]\n";
+		    }
+		    close NOBINorXML;
+		}
+		elsif ($missingBothBin) {
+		    open( NOBINorXML, ">>$outputDir/binaryxml_missing.txt" );
+		    if ( $runPrev ne $jsonHash{$j}{"run name"} ) {
+		        print NOBINorXML "$logtime Couldn't Find [$xmlPath]\n";
+		        print NOBINorXML
+	"$logtime Couldn't Find [$runxmlPath/InterOp/TileMetricsOut.bin]\n";
+		        print NOBINorXML
+	"$logtime Couldn't Find [$runxmlPath/InterOp/ErrorMetricsOut.bin]\n";
+		    }
+		    close NOBINorXML;
+		}
+		elsif ($missingOneBin) {
+		    open( NOBINorXML, ">>$outputDir/binaryxml_missing.txt" );
+		    if ( $runPrev ne $jsonHash{$j}{"run name"} ) {
+		        print NOBINorXML "$logtime Couldn't Find [$xmlPath]\n";
+
+		        if ( -e "$runxmlPath/InterOp/TileMetricsOut.bin" ) {
+		            print NOBINorXML
+	"$logtime Couldn't Find [$runxmlPath/InterOp/ErrorMetricsOut.bin]\n";
+		        }
+		        else {
+		            print NOBINorXML
+	"$logtime Couldn't Find [$runxmlPath/InterOp/TileMetricsOut.bin]\n";
+		        }
+		    }
+		    close NOBINorXML;
+		}
+
+		# assigns 'n/a' in place of missing data and classifies as NIL
+		$reportHash{"NIL"}{"R1 Phasing"}      = "n/a";
+		$reportHash{"NIL"}{"R1 Prephasing"}   = "n/a";
+		$reportHash{"NIL"}{"R1 PhiX Error %"} = "n/a";
+
+		$reportHash{"NIL"}{"R2 Phasing"}      = "n/a";
+		$reportHash{"NIL"}{"R2 Prephasing"}   = "n/a";
+		$reportHash{"NIL"}{"R2 PhiX Error %"} = "n/a";
+
+		$reportHash{"NIL"}{"# Raw Clusters"} = "n/a";
+		$reportHash{"NIL"}{"PF %"}           = "n/a";
+
+		$reportHash{"NIL"}{"Source"} = "Nil";
+	    }
+
+	    # sets previous xml path and run
+	    $xmlpathPrev = $xmlPath;
+	    $runPrev     = $jsonHash{$j}{"run name"};
+
+	    $rawReads =
+	      $jsonHash{$j}{"mapped reads"} +
+	      $jsonHash{$j}{"unmapped reads"} +
+	      $jsonHash{$j}{"qual fail reads"};
+
+	    if ( $rawReads > 0 ) {
+		$mapRate = ( $jsonHash{$j}{"mapped reads"} / $rawReads );   #mapped reads/total reads
+		$reportHash{"Uniquely Mapped %"} = $mapRate;		    #add uniquely mapped % into the report
+	    }
+	    else {
+		$reportHash{"Uniquely Mapped %"} = "0";
+	    }
+
+	    # quality calculations
+	    $qOver30 = 0;
+	    $qTotal  = 0;
+
+	    # count first in pair and unpaired reads as read 1
+	    for my $q ( keys %{ $jsonHash{$j}{"read 1 quality histogram"} } ) {
+		if ( $q >= 30 ) {
+		    $qOver30 += $jsonHash{$j}{"read 1 quality histogram"}{$q};
+		}
+		$qTotal += $jsonHash{$j}{"read 1 quality histogram"}{$q};
+	    }
+	    for my $q ( keys %{ $jsonHash{$j}{"read ? quality histogram"} } ) {
+		if ( $q >= 30 ) {
+		    $qOver30 += $jsonHash{$j}{"read ? quality histogram"}{$q};
+		}
+		$qTotal += $jsonHash{$j}{"read ? quality histogram"}{$q};
+	    }
+
+	    if ( $qTotal > 0 ) {
+		$reportHash{"R1 % >= q30"} = $qOver30 / $qTotal;	     #report percent of read qualities over 30 for R1
+	    }
+	    else {
+		$reportHash{"R1 % >= q30"} = "n/a";
+	    }
+
+	    $qOver30 = 0;
+	    $qTotal  = 0;
+	    for my $q ( keys %{ $jsonHash{$j}{"read 2 quality histogram"} } ) {
+		if ( $q >= 30 ) {
+		    $qOver30 += $jsonHash{$j}{"read 2 quality histogram"}{$q};
+		}
+		$qTotal += $jsonHash{$j}{"read 2 quality histogram"}{$q};
+	    }
+
+	    if ( $qTotal > 0 ) {
+		$reportHash{"R2 % >= q30"} = $qOver30 / $qTotal;	     #report percent of read qualities over 30 for R2
+	    }
+	    else {
+		$reportHash{"R2 % >= q30"} = "n/a";
+	    }
+
+	    # mismatch errors
+	    if ( byCycleToCount( $jsonHash{$j}{"read 1 aligned by cycle"} ) > 0 ) {
+		$R1errorRate = (
+		    (
+		        byCycleToCount( $jsonHash{$j}{"read 1 mismatch by cycle"} ) +
+		          byCycleToCount( $jsonHash{$j}{"read 1 insertion by cycle"} )
+		          + byCycleToCount( $jsonHash{$j}{"read 1 deletion by cycle"} )
+		    ) / byCycleToCount( $jsonHash{$j}{"read 1 aligned by cycle"} )
+		) * 100;
+	    }
+	    else {
+		$R1errorRate = "n/a";
+	    }
+
+	    if ( byCycleToCount( $jsonHash{$j}{"read 2 aligned by cycle"} ) > 0 ) {
+		$R2errorRate = (
+		    (
+		        byCycleToCount( $jsonHash{$j}{"read 2 mismatch by cycle"} ) +
+		          byCycleToCount( $jsonHash{$j}{"read 2 insertion by cycle"} )
+		          + byCycleToCount( $jsonHash{$j}{"read 2 deletion by cycle"} )
+		    ) / byCycleToCount( $jsonHash{$j}{"read 2 aligned by cycle"} )
+		) * 100;
+	    }
+	    else {
+		$R2errorRate = "n/a";
+	    }
+
+	    $reportHash{"R1 Error %"} = $R1errorRate;    
+	    $reportHash{"R2 Error %"} = $R2errorRate;
+
+	    # soft clip errors
+	    if (
+		(
+		    byCycleToCount( $jsonHash{$j}{"read 1 aligned by cycle"} ) +
+		    byCycleToCount( $jsonHash{$j}{"read 1 soft clip by cycle"} )
+		) > 0
+	      )
+	    {
+		$R1softClipRate =
+		  byCycleToCount( $jsonHash{$j}{"read 1 soft clip by cycle"} ) /
+		  ( byCycleToCount( $jsonHash{$j}{"read 1 aligned by cycle"} ) +
+		      byCycleToCount( $jsonHash{$j}{"read 1 soft clip by cycle"} ) ) *
+		  100;
+	    }
+	    else {
+		$R1softClipRate = "n/a";
+	    }
+
+	    if (
+		(
+		    byCycleToCount( $jsonHash{$j}{"read 2 aligned by cycle"} ) +
+		    byCycleToCount( $jsonHash{$j}{"read 2 soft clip by cycle"} )
+		) > 0
+	      )
+	    {
+		$R2softClipRate =
+		  byCycleToCount( $jsonHash{$j}{"read 2 soft clip by cycle"} ) /
+		  ( byCycleToCount( $jsonHash{$j}{"read 2 aligned by cycle"} ) +
+		      byCycleToCount( $jsonHash{$j}{"read 2 soft clip by cycle"} ) ) *
+		  100;
+	    }
+	    else {
+		$R2softClipRate = "n/a";
+	    }
+
+	    $reportHash{"R1 Soft Clip %"} = $R1softClipRate;
+	    $reportHash{"R2 Soft Clip %"} = $R2softClipRate;
+
+	    #add estimated reads per start point
+	    $reportHash{"Est Reads/SP"} = $jsonHash{$j}{"reads per start point"};
+
+	    #calculate percent of reads on target to total mapped reads
+	    if ( $jsonHash{$j}{"mapped reads"} > 0 ) {
+		$onTargetRate =
+		  ( $jsonHash{$j}{"reads on target"} / $jsonHash{$j}{"mapped reads"} );
+	    }
+	    else {
+		$onTargetRate = "n/a";
+	    }
+
+	    #calculate estimated yield value = (number of aligned bases * percent of reads on target) / number of reads per start point
+	    if (    ( $jsonHash{$j}{"reads per start point"} > 0 )
+		and ( $onTargetRate ne "n/a" ) )
+	    {
+		$estimatedYield =
+		  int( ( $jsonHash{$j}{"aligned bases"} * $onTargetRate ) /
+		      $jsonHash{$j}{"reads per start point"} );
+	    }
+	    else {
+		$estimatedYield = "n/a";
+	    }
+
+	    #calculate estimated coverage = estimated yield value/target size
+	    if ( $estimatedYield ne "n/a" ) {
+		$estimatedCoverage = $estimatedYield / $jsonHash{$j}{"target size"};
+	    }
+	    else {
+		$estimatedCoverage = "n/a";
+	    }
+
+	    $reportHash{"% on Target"}  = $onTargetRate;
+	    $reportHash{"Est Yield"}    = $estimatedYield;
+	    $reportHash{"Est Coverage"} = $estimatedCoverage;
+
+	    $reportHash{"Coverage Target"} = $jsonHash{$j}{"target file"};
+
+	    iterateReportHash( $instFH{$inst}, \%reportHash, \@sourceFile );
     }
-    elsif ( $runPrev ne $jsonHash{$j}{"run name"} ) {
-
-        # every run any missing InterOp/SAV files are printed to log files
-        # note: only one set of InterOp/SAV files per run
-        if ( !-e "$runxmlPath/InterOp/TileMetricsOut.bin" ) {
-            open( NOBIN, ">>$outputDir/binary_missing.txt" );
-            print NOBIN
-"$logtime Couldn't Find [$runxmlPath/InterOp/TileMetricsOut.bin]\n";
-            close NOBIN;
-        }
-
-        if ( !-e "$runxmlPath/InterOp/ErrorMetricsOut.bin" ) {
-            open( NOBIN, ">>$outputDir/binary_missing.txt" );
-            print NOBIN
-"$logtime Couldn't Find [$runxmlPath/InterOp/ErrorMetricsOut.bin]\n";
-            close NOBIN;
-        }
-    }
-
-    # determines current status of illumina metric value source files
-    my $missingBothBin = "true"
-      if ( !-e "$runxmlPath/InterOp/TileMetricsOut.bin" )
-      && ( !-e "$runxmlPath/InterOp/TileMetricsOut.bin" );
-    my $missingOneBin = "true"
-      if ( !-e "$runxmlPath/InterOp/TileMetricsOut.bin" ) !=
-      ( !-e "$runxmlPath/InterOp/ErrorMetricsOut.bin" );
-    my $missingXML     = "true" if ( !-d "$xmlPath" );
-    my $missingInterOp = "true" if ( !-d "$runxmlPath/InterOp" );
-
-    # If read XML and one or more InterOp/SAV binaries do not exist
-    # errors are reported and reportHash values set to 'n/a'
-    if ( $missingXML && ( $missingOneBin || $missingBothBin ) ) {
-        if ($missingInterOp) {
-            open( NOBINorXML, ">>$outputDir/binaryxml_missing.txt" );
-            if ( $runPrev ne $jsonHash{$j}{"run name"} ) {
-                print NOBINorXML "$logtime Couldn't Find [$xmlPath]\n";
-                print NOBINorXML
-                  "$logtime Couldn't Find [$runxmlPath/InterOp]\n";
-            }
-            close NOBINorXML;
-        }
-        elsif ($missingBothBin) {
-            open( NOBINorXML, ">>$outputDir/binaryxml_missing.txt" );
-            if ( $runPrev ne $jsonHash{$j}{"run name"} ) {
-                print NOBINorXML "$logtime Couldn't Find [$xmlPath]\n";
-                print NOBINorXML
-"$logtime Couldn't Find [$runxmlPath/InterOp/TileMetricsOut.bin]\n";
-                print NOBINorXML
-"$logtime Couldn't Find [$runxmlPath/InterOp/ErrorMetricsOut.bin]\n";
-            }
-            close NOBINorXML;
-        }
-        elsif ($missingOneBin) {
-            open( NOBINorXML, ">>$outputDir/binaryxml_missing.txt" );
-            if ( $runPrev ne $jsonHash{$j}{"run name"} ) {
-                print NOBINorXML "$logtime Couldn't Find [$xmlPath]\n";
-
-                if ( -e "$runxmlPath/InterOp/TileMetricsOut.bin" ) {
-                    print NOBINorXML
-"$logtime Couldn't Find [$runxmlPath/InterOp/ErrorMetricsOut.bin]\n";
-                }
-                else {
-                    print NOBINorXML
-"$logtime Couldn't Find [$runxmlPath/InterOp/TileMetricsOut.bin]\n";
-                }
-            }
-            close NOBINorXML;
-        }
-
-        # assigns 'n/a' in place of missing data and classifies as NIL
-        $reportHash{"NIL"}{"R1 Phasing"}      = "n/a";
-        $reportHash{"NIL"}{"R1 Prephasing"}   = "n/a";
-        $reportHash{"NIL"}{"R1 PhiX Error %"} = "n/a";
-
-        $reportHash{"NIL"}{"R2 Phasing"}      = "n/a";
-        $reportHash{"NIL"}{"R2 Prephasing"}   = "n/a";
-        $reportHash{"NIL"}{"R2 PhiX Error %"} = "n/a";
-
-        $reportHash{"NIL"}{"# Raw Clusters"} = "n/a";
-        $reportHash{"NIL"}{"PF %"}           = "n/a";
-
-        $reportHash{"NIL"}{"Source"} = "Nil";
-    }
-
-    # sets previous xml path and run
-    $xmlpathPrev = $xmlPath;
-    $runPrev     = $jsonHash{$j}{"run name"};
-
-    $rawReads =
-      $jsonHash{$j}{"mapped reads"} +
-      $jsonHash{$j}{"unmapped reads"} +
-      $jsonHash{$j}{"qual fail reads"};
-
-    if ( $rawReads > 0 ) {
-        $mapRate = ( $jsonHash{$j}{"mapped reads"} / $rawReads );   #mapped reads/total reads
-        $reportHash{"Uniquely Mapped %"} = $mapRate;		    #add uniquely mapped % into the report
-    }
-    else {
-        $reportHash{"Uniquely Mapped %"} = "0";
-    }
-
-    # quality calculations
-    $qOver30 = 0;
-    $qTotal  = 0;
-
-    # count first in pair and unpaired reads as read 1
-    for my $q ( keys %{ $jsonHash{$j}{"read 1 quality histogram"} } ) {
-        if ( $q >= 30 ) {
-            $qOver30 += $jsonHash{$j}{"read 1 quality histogram"}{$q};
-        }
-        $qTotal += $jsonHash{$j}{"read 1 quality histogram"}{$q};
-    }
-    for my $q ( keys %{ $jsonHash{$j}{"read ? quality histogram"} } ) {
-        if ( $q >= 30 ) {
-            $qOver30 += $jsonHash{$j}{"read ? quality histogram"}{$q};
-        }
-        $qTotal += $jsonHash{$j}{"read ? quality histogram"}{$q};
-    }
-
-    if ( $qTotal > 0 ) {
-        $reportHash{"R1 % >= q30"} = $qOver30 / $qTotal;	     #report percent of read qualities over 30 for R1
-    }
-    else {
-        $reportHash{"R1 % >= q30"} = "n/a";
-    }
-
-    $qOver30 = 0;
-    $qTotal  = 0;
-    for my $q ( keys %{ $jsonHash{$j}{"read 2 quality histogram"} } ) {
-        if ( $q >= 30 ) {
-            $qOver30 += $jsonHash{$j}{"read 2 quality histogram"}{$q};
-        }
-        $qTotal += $jsonHash{$j}{"read 2 quality histogram"}{$q};
-    }
-
-    if ( $qTotal > 0 ) {
-        $reportHash{"R2 % >= q30"} = $qOver30 / $qTotal;	     #report percent of read qualities over 30 for R2
-    }
-    else {
-        $reportHash{"R2 % >= q30"} = "n/a";
-    }
-
-    # mismatch errors
-    if ( byCycleToCount( $jsonHash{$j}{"read 1 aligned by cycle"} ) > 0 ) {
-        $R1errorRate = (
-            (
-                byCycleToCount( $jsonHash{$j}{"read 1 mismatch by cycle"} ) +
-                  byCycleToCount( $jsonHash{$j}{"read 1 insertion by cycle"} )
-                  + byCycleToCount( $jsonHash{$j}{"read 1 deletion by cycle"} )
-            ) / byCycleToCount( $jsonHash{$j}{"read 1 aligned by cycle"} )
-        ) * 100;
-    }
-    else {
-        $R1errorRate = "n/a";
-    }
-
-    if ( byCycleToCount( $jsonHash{$j}{"read 2 aligned by cycle"} ) > 0 ) {
-        $R2errorRate = (
-            (
-                byCycleToCount( $jsonHash{$j}{"read 2 mismatch by cycle"} ) +
-                  byCycleToCount( $jsonHash{$j}{"read 2 insertion by cycle"} )
-                  + byCycleToCount( $jsonHash{$j}{"read 2 deletion by cycle"} )
-            ) / byCycleToCount( $jsonHash{$j}{"read 2 aligned by cycle"} )
-        ) * 100;
-    }
-    else {
-        $R2errorRate = "n/a";
-    }
-
-    $reportHash{"R1 Error %"} = $R1errorRate;    
-    $reportHash{"R2 Error %"} = $R2errorRate;
-
-    # soft clip errors
-    if (
-        (
-            byCycleToCount( $jsonHash{$j}{"read 1 aligned by cycle"} ) +
-            byCycleToCount( $jsonHash{$j}{"read 1 soft clip by cycle"} )
-        ) > 0
-      )
-    {
-        $R1softClipRate =
-          byCycleToCount( $jsonHash{$j}{"read 1 soft clip by cycle"} ) /
-          ( byCycleToCount( $jsonHash{$j}{"read 1 aligned by cycle"} ) +
-              byCycleToCount( $jsonHash{$j}{"read 1 soft clip by cycle"} ) ) *
-          100;
-    }
-    else {
-        $R1softClipRate = "n/a";
-    }
-
-    if (
-        (
-            byCycleToCount( $jsonHash{$j}{"read 2 aligned by cycle"} ) +
-            byCycleToCount( $jsonHash{$j}{"read 2 soft clip by cycle"} )
-        ) > 0
-      )
-    {
-        $R2softClipRate =
-          byCycleToCount( $jsonHash{$j}{"read 2 soft clip by cycle"} ) /
-          ( byCycleToCount( $jsonHash{$j}{"read 2 aligned by cycle"} ) +
-              byCycleToCount( $jsonHash{$j}{"read 2 soft clip by cycle"} ) ) *
-          100;
-    }
-    else {
-        $R2softClipRate = "n/a";
-    }
-
-    $reportHash{"R1 Soft Clip %"} = $R1softClipRate;
-    $reportHash{"R2 Soft Clip %"} = $R2softClipRate;
-
-    #add estimated reads per start point
-    $reportHash{"Est Reads/SP"} = $jsonHash{$j}{"reads per start point"};
-
-    #calculate percent of reads on target to total mapped reads
-    if ( $jsonHash{$j}{"mapped reads"} > 0 ) {
-        $onTargetRate =
-          ( $jsonHash{$j}{"reads on target"} / $jsonHash{$j}{"mapped reads"} );
-    }
-    else {
-        $onTargetRate = "n/a";
-    }
-
-    #calculate estimated yield value = (number of aligned bases * percent of reads on target) / number of reads per start point
-    if (    ( $jsonHash{$j}{"reads per start point"} > 0 )
-        and ( $onTargetRate ne "n/a" ) )
-    {
-        $estimatedYield =
-          int( ( $jsonHash{$j}{"aligned bases"} * $onTargetRate ) /
-              $jsonHash{$j}{"reads per start point"} );
-    }
-    else {
-        $estimatedYield = "n/a";
-    }
-
-    #calculate estimated coverage = estimated yield value/target size
-    if ( $estimatedYield ne "n/a" ) {
-        $estimatedCoverage = $estimatedYield / $jsonHash{$j}{"target size"};
-    }
-    else {
-        $estimatedCoverage = "n/a";
-    }
-
-    $reportHash{"% on Target"}  = $onTargetRate;
-    $reportHash{"Est Yield"}    = $estimatedYield;
-    $reportHash{"Est Coverage"} = $estimatedCoverage;
-
-    $reportHash{"Coverage Target"} = $jsonHash{$j}{"target file"};
-
-    iterateReportHash( $instFH{$inst}, \%reportHash, \@sourceFile );
-
 }
 
 # SUBROUTINES
@@ -1120,5 +1235,42 @@ sub iterateReportHash {
             }
 
         }
+    }
+}
+
+# Checks whether or not there are JSON files of the bin files and creates them if not
+sub jsonBinDirectoryCheck {
+    my ($runxmlPath) = @_;
+
+    # checks for and creates any missing InterOp/SAV JSON data
+    if ( !-d "$runxmlPath/InterOp/JSON" ) {
+
+# if file system is read-only creates temp directory for JSON output
+#$outDir = determineJsonOutDir($runxmlPath, $reportHash{"Run"});
+# Target outDir for JSON files no longer supported - if create JSON below fails, error logged
+
+        # creates JSON directory
+        `oicr_illuminaSAV_bin_to_json.pl --runDir $runxmlPath`;
+    }
+    elsif (!-e "$runxmlPath/InterOp/JSON/TileMetricsOut.bin.json"
+        && !-e "$runxmlPath/InterOp/JSON/ErrorMetricsOut.bin.json" )
+    {
+# if file system is read-only creates temp directory for JSON output
+#$outDir = determineJsonOutDir($runxmlPath, $reportHash{"Run"});
+# Target outDir for JSON files no longer supported - if create JSON below fails, error logged
+
+        # creates necessary JSON files if they don't exist in JSON directory
+        `oicr_illuminaSAV_bin_to_json.pl --runDir $runxmlPath`;
+    }
+    elsif ( ( -e "$runxmlPath/InterOp/JSON/TileMetricsOut.bin.json" ) !=
+        ( -e "$runxmlPath/InterOp/JSON/ErrorMetricsOut.bin.json" ) )
+    {
+# if file system is read-only creates temp directory for JSON output
+#$outDir = determineJsonOutDir($runxmlPath, $reportHash{"Run"});
+# Target outDir for JSON files no longer supported - if create JSON below fails, error logged
+
+    # removes JSON dir and recreates JSON dir contents of one JSON doesn't exist
+        `rm -r $runxmlPath/InterOp/JSON;`;
+        `oicr_illuminaSAV_bin_to_json.pl --runDir $runxmlPath`;
     }
 }
