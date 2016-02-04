@@ -34,8 +34,7 @@ $ zone="`date "+%Z"`"
 $ timeStamp="\"$ymd $hm $day $zone\""
 $ filePrefix="${ymd}_${hm}_"
 $ fileSuffix="_report.csv"
-$ qsub -cwd -b y -N TestReport -m beas -M "test@test.com" -e error.log -o output.log -l h_vmem=4g "export PERL5LIB=/oicr/local/analysis/lib/perl/pipe/lib/perl5; OICR_PERL_BIN=/oicr/local/analysis/lib/perl/pipe/bin;
-export PATH=$PATH:$OICR_PERL_BIN; /u/test/wideInstrumentReport.pl $timeStamp $filePrefix $fileSuffix /u/test/output /.mounts/labs/PDE/data/testdata/runs/150602_D00355_0086_BC6UA2ANXX/jsonReport/test.annotated.bam.BamQC.json > error.log 2>&1"
+$ qsub -cwd -b y -N TestReport -m beas -M "test@test.com" -e error.log -o output.log -l h_vmem=4g "export PERL5LIB=/oicr/local/analysis/lib/perl/pipe/lib/perl5; export PATH=${PATH}:/oicr/local/analysis/lib/perl/pipe/bin; /u/test/wideInstrumentReport.pl $timeStamp $filePrefix $fileSuffix /u/test/output /.mounts/labs/PDE/data/testdata/runs/150602_D00355_0086_BC6UA2ANXX/jsonReport/test.annotated.bam.BamQC.json > error.log 2>&1"
 ```
 
 ##Expected Output
