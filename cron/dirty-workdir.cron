@@ -1,0 +1,12 @@
+#!/bin/sh
+# Check that the working directory is unmodified
+
+. ${CRON_ROOT}/functions
+
+cd /u/seqprodbio/illumina-run-dirs
+
+if git status --porcelain | grep -v '.nfs' | egrep -q '.'
+then
+	git status >&2
+	exit 1
+fi

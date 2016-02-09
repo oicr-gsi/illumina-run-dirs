@@ -1,0 +1,18 @@
+#!/bin/bash
+
+. ${CRON_ROOT}/functions
+
+reenter skip
+
+cd /u/seqprodbio/illumina-run-dirs
+GIT_UPDATE_FAIL=${HOME}/.git_update_failure
+
+if git pull --ff-only -q
+then
+	rm -f ${GIT_UPDATE_FAIL}
+elif [ -f ${GIT_UPDATE_FAIL} ]
+then
+	exit 1
+else
+	touch ${GIT_UPDATE_FAIL}
+fi
