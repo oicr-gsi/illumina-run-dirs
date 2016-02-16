@@ -18,7 +18,8 @@ if [[ "$*" =~ "no-check" ]]; then
 
 elif [[ ! ( $THISDIR =~ [0-9]{6}_[A-Za-z0-9]{4,6}_[0-9A-Z]{5,6}_[0-9A-Z]{2,3}   ||
         $THISPATH =~ [0-9]{6}_[A-Za-z0-9]{4,6}_[0-9]{4}_[0-9A-Z]{10}        ||
-        $THISPATH =~ [0-9]{6}_SN[A-Za-z0-9]{4,7}_[0-9]{4}_[0-9A-Z]{10}
+        $THISPATH =~ [0-9]{6}_SN[A-Za-z0-9]{4,7}_[0-9]{4}_[0-9A-Z]{10} ||
+        $THISPATH =~ [0-9]{6}_SN[A-Za-z0-9]{4,7}_[0-9]{4}_[0-9A-Za-z]{10}
 
 )  ]];then
         printf "The dir $THISDIR does not look like an illumina run directory\n\n";
