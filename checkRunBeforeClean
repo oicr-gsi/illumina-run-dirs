@@ -50,7 +50,8 @@ fi
 # Use the most current seqware_files_report if one is not provided
 if [ -z "$2" ];then
     #This magic gets the most recent seqware_files_report
-    SOURCE="$(ls -Art /.mounts/labs/seqprodbio/private/backups/hsqwprod-db/seqware* | tail -n 1)"
+#SOURCE="$(ls -Art /.mounts/labs/seqprodbio/private/backups/sqwprod-db.hpc.oicr.on.ca/seqware* | tail -n 1)"
+    SOURCE="$(ls -Art /.mounts/labs/seqprodbio/private/backups/sqwprod-db.hpc.oicr.on.ca/seqware_files_report_latest.gz)"
 else
     #This allows you to run this script from anywhere even if you passed a local seqware_files_report
     SOURCE="`readlink -f $2`"
@@ -79,7 +80,7 @@ for (i=1; i<=NF; i++) {
 printf("\n")
  }'
 printf "~~~~~~\nSummary\n"
-zgrep $FILE $SOURCE | grep chemical/seq-na-fastq-gzip | grep -v Xenome | awk -F'\t' '{printf "L00%s\t%s\t%sG\n", $25, $28, ($49/1000000000)}'| sort | uniq -c
+zgrep $FILE $SOURCE | grep chemical/seq-na-fastq-gzip | grep -v Xenome | awk -F'\t' '{printf "L00%s\t%s\t%3.1fG\n", $25, $28, ($49/1000000000)}'| sort | uniq -c
 #printf "~"
 #zgrep $FILE $SOURCE | grep CASAVA | grep chemical/seq-na-fastq-gzip | awk -F'\t' '{printf "L00%s %s %s\n", $25, $28, $49}' | sort
  
