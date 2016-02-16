@@ -2,6 +2,11 @@
 # 20150505 This script will check for the existance of and report the size of fastq files in the seqware metadatabase (from the seqware file report) for the run dir specified.
 # This script is useful as a check when cleaning up the run dir
 # Why not Perl? LONG LIVE THE BASH SHELL!
+# 2016-02-16: Why not Perl, Tim asks? I reply: watch me python.
+
+
+#USAGE: checkRunBeforeClean [run-dir] [seqware-fpr]
+
 
 # Logging
 OUTPUTFILE="checkRunBeforeCleanReport.txt"
@@ -15,31 +20,6 @@ echo "" > $OUTPUTFILE   #clobber it first
 exec > >(tee -a $OUTPUTFILE)
 exec 2>&1
 
-#Color codes
-#export COLOR_NC='\e[0m' # No Color
-#export COLOR_WHITE='\e[1;37m'
-#export COLOR_BLACK='\e[0;30m'
-#export COLOR_BLUE='\e[0;34m'
-#export COLOR_LIGHT_BLUE='\e[1;34m'
-#export COLOR_GREEN='\e[0;32m'
-#export COLOR_LIGHT_GREEN='\e[1;32m'
-#export COLOR_CYAN='\e[0;36m'
-#export COLOR_LIGHT_CYAN='\e[1;36m'
-#export COLOR_RED='\e[0;31m'
-#export COLOR_LIGHT_RED='\e[1;31m'
-#export COLOR_PURPLE='\e[0;35m'
-#export COLOR_LIGHT_PURPLE='\e[1;35m'
-#export COLOR_BROWN='\e[0;33m'
-#export COLOR_YELLOW='\e[1;33m'
-#export COLOR_GRAY='\e[0;30m'
-#export COLOR_LIGHT_GRAY='\e[0;37m'
-
-# Esc[value;...;valuem
-# 0 all attrib off
-# 1 bold
-# 4 underscore
-# 
-
 # Get the current directory name if a target run dir is not provided
 if [ -z "$1" ]; then
     FILE=${PWD##*/}
@@ -50,7 +30,6 @@ fi
 # Use the most current seqware_files_report if one is not provided
 if [ -z "$2" ];then
     #This magic gets the most recent seqware_files_report
-#SOURCE="$(ls -Art /.mounts/labs/seqprodbio/private/backups/sqwprod-db.hpc.oicr.on.ca/seqware* | tail -n 1)"
     SOURCE="$(ls -Art /.mounts/labs/seqprodbio/private/backups/sqwprod-db.hpc.oicr.on.ca/seqware_files_report_latest.gz)"
 else
     #This allows you to run this script from anywhere even if you passed a local seqware_files_report
@@ -62,10 +41,28 @@ fi
 # Report a header
 # Note we also create a local report file so you can visually inspect and keep a log at the same time
 printf "Date: %s\n" $(date +%Y%m%dT%H%M%S)
+
+
+# Now check the LIMS status of this run
+printf "~~~~~~\nLIMS STATUS CHECK:   Run: %s \n" $FILE 
+set -x
+curl -ks https://pinery.hpc.oicr.on.ca:8443/pinery/sequencerruns | $SCRIPT_DIR/jq-linux-x86_64-static ". | map({name: .name, state: .state, dateCreated: .created_date, positions: .positions | length} | select(.name | test(\"$FILE\"; \"i\")))"
+set +x
+
+printf "~~~~~~\nJIRA STATUS CHECK:   Run: %s \n" $FILE
+
+## The idea for this code was to query JIRA with the run name and generate a report for that as well
+## Would be best to do the same thing for LIMS
+# This works kinda - need to improve:
+# auth - don't add password each time
+# Currently hard-coded for tbeck. I tried the curl -u : option with various security options and using a curl config file, but could not get it to work without auth on command line
+set -x
+curl -ks -u mtaschuk -H "Content-Type: application/json" https://jira.oicr.on.ca/rest/api/2/search?jql=text~\"$FILE\" | $SCRIPT_DIR/jq-linux-x86_64-static ". | {totalIssues: .total},(.issues | map({key,status: .fields.status.name,summary: .fields.summary,reporter: .fields.reporter.name, created: .fields.created, updated: .fields.updated}) | sort_by(.status) | reverse)"
+set +x
+
 printf "~~~~~~\nFASTQ FILE CHECK:   Source file: %s   Look for: %s \n" $SOURCE $FILE 
 
 # Read carefully. Note for the terminal output the file size is highlighted for easy visual check. The files are sorted by filename so R1 and R2 should be paried and ordered by increasing lane
-#zgrep $FILE $SOURCE | grep BCLToFastq | awk -F'\t' '{print $47}' | xargs --no-run-if-empty ls -lalh | sort -k9 | awk -F' ' '{sep=""; for (i=1; i<=NF; i++) {if (i==5) printf("[1;37m%s%s[0m",sep,$i); else printf("%s%s",sep,$i); sep=OFS}; printf("\n") }' | tee >(sed -r "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g" >> seqwareFastqFiles.txt)
 zgrep $FILE $SOURCE | grep chemical/seq-na-fastq-gzip | grep -v Xenome | awk -F'\t' '{print $47}' | xargs --no-run-if-empty ls -lalh | sort -k9 | awk -F' ' '{
 sep="";
 for (i=1; i<=NF; i++) {
@@ -81,28 +78,7 @@ printf("\n")
  }'
 printf "~~~~~~\nSummary\n"
 zgrep $FILE $SOURCE | grep chemical/seq-na-fastq-gzip | grep -v Xenome | awk -F'\t' '{printf "L00%s\t%s\t%3.1fG\n", $25, $28, ($49/1000000000)}'| sort | uniq -c
-#printf "~"
-#zgrep $FILE $SOURCE | grep CASAVA | grep chemical/seq-na-fastq-gzip | awk -F'\t' '{printf "L00%s %s %s\n", $25, $28, $49}' | sort
  
- 
- 
-# }' | tee >(sed -r "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g" >> $OUTPUTFILE)
-
-# Now check the LIMS status of this run
-printf "~~~~~~\nLIMS STATUS CHECK:   Run: %s \n" $FILE 
-set -x
-#curl -ks https://pinery.hpc.oicr.on.ca:8443/pinery/sequencerruns | /u/tbeck/bin/jq ".[] | select( .name==\"$FILE\") | .positions |= sort_by(.position) | { name: .name, state: .state, dateCreated: .created_date}"
-curl -ks https://pinery.hpc.oicr.on.ca:8443/pinery/sequencerruns | $SCRIPT_DIR/jq-linux-x86_64-static ". | map({name: .name, state: .state, dateCreated: .created_date, positions: .positions | length} | select(.name | test(\"$FILE\"; \"i\")))"
-set +x
-printf "~~~~~~\nJIRA STATUS CHECK:   Run: %s \n" $FILE
-
-## The idea for this code was to query JIRA with the run name and generate a report for that as well
-## Would be best to do the same thing for LIMS
-# This works kinda - need to improve:
-# auth - don't add password each time
-# Currently hard-coded for tbeck. I tried the curl -u : option with various security options and using a curl config file, but could not get it to work without auth on command line
-set -x
-curl -ks -u mtaschuk -H "Content-Type: application/json" https://jira.oicr.on.ca/rest/api/2/search?jql=text~\"$FILE\" | $SCRIPT_DIR/jq-linux-x86_64-static ". | {totalIssues: .total},(.issues | map({key,status: .fields.status.name,summary: .fields.summary,reporter: .fields.reporter.name, created: .fields.created, updated: .fields.updated}) | sort_by(.status) | reverse)"
 set +x
 
 # clean out color annotation for screen display from log
