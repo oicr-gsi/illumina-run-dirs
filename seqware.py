@@ -4,16 +4,20 @@ import re,csv
 import argparse
 import gzip
 import os
+oicrfpr="/.mounts/labs/seqprodbio/private/backups/sqwprod-db.hpc.oicr.on.ca/seqware_files_report_latest.gz"
 
 NO_CLEAN=1
 CLEAN=0
 CONTINUE=100
 
 def main(args):
-    fastqs=get_file_details(args.fpr,args.run)
+    if args.fpr is not None:
+        fastqs=get_sequencer_run(args.run, fpr=args.fpr)
+    else:
+        fastqs=get_sequencer_run(args.run)
     return decisions(fastqs, verbose=args.verbose)
 
-def get_file_details(fpr,rname,filetype="chemical/seq-na-fastq-gzip",wfilter="Xenome"):
+def get_sequencer_run(rname,filetype="chemical/seq-na-fastq-gzip",wfilter="Xenome",fpr=oicrfpr):
     """
     Parse the file provenance report, search for sequencer runs called "rname", 
     locate files of a particular type "filetype", filtering out those from workflows named "wfilter".
@@ -118,30 +122,30 @@ def decisions(fastqs,verbose=False):
             print("Lane "+lane+" size:"+str(size/1e9)+"G")
         if size/1e9 < 20:
             smallfile=True
-            problems.append("Lane "+lane+" size is <20G:"+str(size/1e9))
+            problems.insert(0,"\t".join(["Lane",lane,"size is <20G:",str(size/1e9)]))
     if verbose:
         for v in verbose_out:
             print(v)
     
     if problems:
         import time
-        print(time.strftime("%d/%m/%Y %H:%M:%S"),"File issues Detected",len(problems))
+        print(time.strftime("%d/%m/%Y %H:%M:%S"),"SeqWare issues detected",len(problems))
     for p in problems:
         print(p)
     return what_is_your_will(morethantwo,lessthantwo,mismatchfilesize,smallfile)
 
 def what_is_your_will(morethantwo,lessthantwo,mismatchfilesize,smallfile):
    if smallfile:
-       print("Do not clean. JIRA ticket: diagnose small data problem")
+       print("SeqWare: Do not clean. Make JIRA ticket: diagnose small data problem")
        return NO_CLEAN
    if lessthantwo:
-       print("Do not clean. JIRA ticket: locate or regenerate data.")
+       print("SeqWare: Do not clean. Make JIRA ticket: locate or regenerate data.")
        return NO_CLEAN
    if morethantwo:
-       print("Clean. Make JIRA ticket.")
+       print("SeqWare: More than two fastqs. Clean. Make JIRA ticket.")
        return CLEAN
    if mismatchfilesize:
-       print("Possibly clean if no other problems")
+#       print("SeqWare: Continue; possibly clean")
        return CONTINUE
 
 def test_decisions():
@@ -170,7 +174,7 @@ if __name__ == "__main__":
     import sys
     parser = argparse.ArgumentParser(description="Searches for and reports the status of fastqs in SeqWare according to sequencer run name")
     parser.add_argument("--run", "-r", help="the name of the sequencer run, e.g. 111130_h801_0064_AC043YACXX", required=True)
-    parser.add_argument("--fpr", "-f", help="The SeqWare file provenance report to search", required=True)
+    parser.add_argument("--fpr", "-f", help="The SeqWare file provenance report to search")
     parser.add_argument("--verbose","-v", help="Verbose logging",action="store_true")
     args=parser.parse_args()
     sys.exit(main(args))

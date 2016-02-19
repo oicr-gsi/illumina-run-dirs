@@ -12,6 +12,19 @@ CLEAN=0
 CONTINUE=100
 NO_CLEAN=1
 
+def main(args):
+    if args.url is not None:
+        url=args.url
+    else:
+        url=oicrurl
+
+    if args.json is None:
+        tickets=get_sequencer_runs(args.run,args.username,url=url)
+    else: 
+        tickets=json.load(args.json)
+
+    return decisions(tickets,verbose=args.verbose)
+
 
 def get_jira_username_pass(username):
     if "JIRA_AUTH_FILE" in os.environ:
@@ -28,7 +41,7 @@ def get_jira_username_pass(username):
                 return l.strip()
     raise IOError("No matching username "+username+" in "+passfile)
 
-def jira_sequencer_runs(rname,username,url=oicrurl):
+def get_sequencer_runs(rname,username,url=oicrurl):
     """
     Gets all of the tickets that talk about rname using creds from username
     """
@@ -48,19 +61,6 @@ def jira_sequencer_runs(rname,username,url=oicrurl):
         print("Network error: %s" % e.reason.args[1])
         sys.exit(2)
     return tickets
-
-def main(args):
-    if args.url is not None:
-        url=args.url
-    else:
-        url=oicrurl
-
-    if args.json is None:
-        tickets=jira_sequencer_runs(args.run,args.username,url=url)
-    else: 
-        tickets=json.load(args.json)
-
-    return decisions(tickets,verbose=args.verbose)
 
 
 def decisions(tickets, verbose=False):
@@ -87,10 +87,10 @@ def print_verbose(ticket):
 
 def what_is_your_will(anyopen):
     if anyopen:
-        print("Stop; do not clean")
+        print("JIRA: Stop; do not clean")
         return NO_CLEAN
     else:
-        print("Continue; possibly clean")
+        #print("JIRA: Continue; possibly clean")
         return CONTINUE
 
 

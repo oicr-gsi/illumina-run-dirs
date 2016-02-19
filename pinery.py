@@ -11,6 +11,16 @@ CLEAN=0
 NO_CLEAN=1
 CONTINUE=100
 
+def main(args):
+    if args.url is not None:
+        url=args.url
+    if args.json is None:
+        runs = get_sequencer_runs(args.run,url=url)
+    else: 
+        runs = open_json(args.json,args.run)
+    return(decisions(runs,verbose=args.verbose))
+
+
 def get_sequencer_run(runs_obj, rname):
     """
     Gets all of the sequencer runs that match rname
@@ -23,7 +33,7 @@ def get_sequencer_run(runs_obj, rname):
             runs.append(i)
     return runs
 
-def pinery_sequencer_runs(rname,url=oicrurl):
+def get_sequencer_runs(rname,url=oicrurl):
     """
     Gets all of the sequencer runs that match rname from pinery webservice.
     """
@@ -53,14 +63,7 @@ def open_json(filename,rname):
     return runs
        
 
-def main(args):
-    if args.url is not None:
-        url=args.url
-    if args.json is None:
-        runs = pinery_sequencer_runs(args.run,url=url)
-    else: 
-        runs = open_json(args.json,args.run)
-    return(decisions(runs,verbose=args.verbose))
+
 
 
 def decisions(runs, verbose=False):
@@ -86,7 +89,8 @@ def decisions(runs, verbose=False):
                  positions.append(pos)
         elif patt_run.match(r['state']):
             inprogress=True
-    print("Run exists: ", exists, "\nRun succeeded: ", succeeded, "\nRun in progress: ", inprogress)
+    if verbose:
+        print("Run exists: ", exists, "\nRun succeeded: ", succeeded, "\nRun in progress: ", inprogress)
     return(what_is_your_will(exists,inprogress,succeeded))
 
 def print_verbose(run):
@@ -96,16 +100,16 @@ def print_verbose(run):
 
 def what_is_your_will(exists,inprogress,succeeded):
     if not exists:
-        print("Delete folder; Add to JIRA ticket GP-596")
+        print("Pinery: Delete folder; Add to JIRA ticket GP-596")
         return CLEAN
     if inprogress:
-        print("Stop; do not clean")
+        print("Pinery: Stop; do not clean")
         return NO_CLEAN
     if succeeded:
-        print("Continue; possibly clean")
+        #print("Pinery: Continue; possibly clean")
         return CONTINUE
     else:
-        print("Failed. Clean run")
+        print("Pinery: Run failed. Clean run")
         return CLEAN
 
 
