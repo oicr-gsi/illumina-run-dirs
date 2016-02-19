@@ -5,7 +5,11 @@ import json
 import argparse
 import urllib2,ssl
 import re
+oicrurl="https://pinery.hpc.oicr.on.ca:8443"
 
+CLEAN=0
+NO_CLEAN=1
+CONTINUE=100
 
 def get_sequencer_run(runs_obj, rname):
     """
@@ -19,7 +23,7 @@ def get_sequencer_run(runs_obj, rname):
             runs.append(i)
     return runs
 
-def pinery_sequencer_runs(url,rname):
+def pinery_sequencer_runs(rname,url=oicrurl):
     """
     Gets all of the sequencer runs that match rname from pinery webservice.
     """
@@ -50,16 +54,13 @@ def open_json(filename,rname):
        
 
 def main(args):
-    if args.url is None:
-        url="https://pinery.hpc.oicr.on.ca:8443"
-    else:
+    if args.url is not None:
         url=args.url
-
     if args.json is None:
-        runs = pinery_sequencer_runs(url,args.run)
+        runs = pinery_sequencer_runs(args.run,url=url)
     else: 
         runs = open_json(args.json,args.run)
-    decisions(runs,verbose=args.verbose)
+    return(decisions(runs,verbose=args.verbose))
 
 
 def decisions(runs, verbose=False):
@@ -85,9 +86,8 @@ def decisions(runs, verbose=False):
                  positions.append(pos)
         elif patt_run.match(r['state']):
             inprogress=True
-    if verbose:        
-        print("Exists: ", exists, "; succeeded: ", succeeded, "; Run in progress: ", inprogress)
-    print("Decision: ", what_is_your_will(exists,inprogress,succeeded))
+    print("Run exists: ", exists, "\nRun succeeded: ", succeeded, "\nRun in progress: ", inprogress)
+    return(what_is_your_will(exists,inprogress,succeeded))
 
 def print_verbose(run):
     print("name:\t",run['name'])
@@ -96,13 +96,17 @@ def print_verbose(run):
 
 def what_is_your_will(exists,inprogress,succeeded):
     if not exists:
-        return "Delete folder; Add to JIRA ticket GP-596"
+        print("Delete folder; Add to JIRA ticket GP-596")
+        return CLEAN
     if inprogress:
-        return "Stop; do not clean"
+        print("Stop; do not clean")
+        return NO_CLEAN
     if succeeded:
-        return "Continue; possibly clean"
+        print("Continue; possibly clean")
+        return CONTINUE
     else:
-        return "Clean run"
+        print("Failed. Clean run")
+        return CLEAN
 
 
 
@@ -115,4 +119,4 @@ if __name__ == "__main__":
     parser.add_argument("--url", help="the pinery URL. Default: https://pinery.hpc.oicr.on.ca:8443")
     parser.add_argument("--verbose","-v", help="Verbose logging",action="store_true")
     args=parser.parse_args()
-    main(args)
+    system.exit(main(args))
