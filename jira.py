@@ -1,6 +1,6 @@
 #!/usr/bin/python
 from __future__ import print_function
-
+import sys
 import json
 import argparse
 import urllib2,ssl,base64
@@ -55,10 +55,10 @@ def get_sequencer_runs(rname,username,url=oicrurl):
         result = urllib2.urlopen(request,context=ctx)
         tickets=json.load(result)
     except urllib2.HTTPError, e:
-        print("HTTP error: %d" % e.code)
+        print("HTTP error: %d" % e.code, file=sys.stderr)
         sys.exit(e.code)
     except urllib2.URLError, e:
-        print("Network error: %s" % e.reason.args[1])
+        print("Network error: %s" % e.reason.args[1], file=sys.stderr)
         sys.exit(2)
     return tickets
 
@@ -75,19 +75,19 @@ def decisions(tickets, verbose=False):
             anyopen=True
     if keys:
         import time
-        print(time.strftime("%d/%m/%Y %H:%M:%S"),"Open JIRA tickets", keys)
+        print(time.strftime("%d/%m/%Y %H:%M:%S"),"Open JIRA tickets", keys, file=sys.stderr)
     return what_is_your_will(anyopen)
 
 def print_verbose(ticket):
-    print("Key\t",ticket['key'])
-    print("Status\t",ticket['fields']['status']['name'])
-    print("Summary:\t", ticket['fields']['summary'])
-    print("Reporter:\t",ticket['fields']['reporter']['name'])
-    print("Updated:\t",ticket['fields']['updated'],"\n")
+    print("Key\t",ticket['key'], file=sys.stderr)
+    print("Status\t",ticket['fields']['status']['name'], file=sys.stderr)
+    print("Summary:\t", ticket['fields']['summary'], file=sys.stderr)
+    print("Reporter:\t",ticket['fields']['reporter']['name'], file=sys.stderr)
+    print("Updated:\t",ticket['fields']['updated'],"\n", file=sys.stderr)
 
 def what_is_your_will(anyopen):
     if anyopen:
-        print("JIRA: Stop; do not clean")
+        print("JIRA: Stop; do not clean", file=sys.stderr)
         return NO_CLEAN
     else:
         #print("JIRA: Continue; possibly clean")
@@ -96,7 +96,6 @@ def what_is_your_will(anyopen):
 
 
 if __name__ == "__main__":
-    import sys
     parser = argparse.ArgumentParser(description="Searches for and reports the status of issues in JIRA")
     parser.add_argument("--run", "-r", help="the name of the sequencer run, e.g. 111130_h801_0064_AC043YACXX", required=True)
     parser.add_argument("--json", "-j", help="The sequencer run JSON file to search")

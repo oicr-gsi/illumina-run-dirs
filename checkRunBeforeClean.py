@@ -8,22 +8,22 @@ import argparse
 def main(args):
     if args.verbose:
         import time
-        print(time.strftime("%d/%m/%Y %H:%M:%S"),args.run)
-        print("------------------------\nPinery\n------------------------")
+        print(time.strftime("%d/%m/%Y %H:%M:%S"),args.run, file=sys.stderr)
+        print("------------------------\nPinery\n------------------------", file=sys.stderr)
     pruns = pinery.get_sequencer_runs(args.run)
     presult = pinery.decisions(pruns, verbose=args.verbose)
 
     if args.verbose:
-        print("------------------------\nJIRA\n------------------------")
+        print("------------------------\nJIRA\n------------------------", file=sys.stderr)
     jruns = jira.get_sequencer_runs(args.run,args.username)
     jresult = jira.decisions(jruns,verbose=args.verbose)
     if args.verbose:
-        print("------------------------\nSeqWare\n------------------------")
+        print("------------------------\nSeqWare\n------------------------", file=sys.stderr)
     sruns = seqware.get_sequencer_run(args.run)
     sresult = seqware.decisions(sruns,verbose=args.verbose)
     if args.verbose:
-        print("------------------------\nFINAL\n------------------------")
-        print("Pinery", str(presult), "\nJIRA", str(jresult), "\nSeqWare", str(sresult))
+        print("------------------------\nFINAL\n------------------------", file=sys.stderr)
+        print("Pinery", str(presult), "\nJIRA", str(jresult), "\nSeqWare", str(sresult), file=sys.stderr)
     if presult==pinery.CLEAN:
         print(args.run, "Pinery", "Clean")
     elif presult==pinery.NO_CLEAN:

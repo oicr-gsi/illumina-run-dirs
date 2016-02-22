@@ -1,5 +1,6 @@
 #!/usr/bin/python
 from __future__ import print_function
+import sys
 import re,csv
 import argparse
 import gzip
@@ -92,6 +93,7 @@ def decisions(fastqs,verbose=False):
         size=0
         for ius in iuses:
             count=fastqs[lane][ius]['count']
+            library=fastqs[lane][ius]['library']
             #Test if there are more than 2 files per IUS
             if count > 2:
                 morethantwo=True
@@ -100,7 +102,6 @@ def decisions(fastqs,verbose=False):
             elif count < 2:
                 lessthantwo=True
                 problems.append(details(lane,ius,library,"Only "+str(count)+" file"))
-            library=fastqs[lane][ius]['library']
             swids=fastqs[lane][ius]['details']
             for swid in swids:
                 sw=swids[swid]['sw_size']
@@ -119,31 +120,31 @@ def decisions(fastqs,verbose=False):
 
         #Test to see if the lane size is less than 20G
         if verbose:
-            print("Lane "+lane+" size:"+str(size/1e9)+"G")
+            print("Lane "+lane+" size:"+str(size/1e9)+"G", file=sys.stderr)
         if size/1e9 < 20:
             smallfile=True
             problems.insert(0,"\t".join(["Lane",lane,"size is <20G:",str(size/1e9)]))
     if verbose:
         for v in verbose_out:
-            print(v)
+            print(v, file=sys.stderr)
     
     if problems:
         import time
-        print(time.strftime("%d/%m/%Y %H:%M:%S"),"SeqWare issues detected",len(problems))
+        print(time.strftime("%d/%m/%Y %H:%M:%S"),"SeqWare issues detected",len(problems), file=sys.stderr)
     for p in problems:
-        print(p)
+        print(p, file=sys.stderr)
     return what_is_your_will(morethantwo,lessthantwo,mismatchfilesize,smallfile)
 
 def what_is_your_will(morethantwo,lessthantwo,mismatchfilesize,smallfile):
    if smallfile:
-       print("SeqWare: Do not clean. Make JIRA ticket: diagnose small data problem")
+       print("SeqWare: Do not clean. Make JIRA ticket: diagnose small data problem", file=sys.stderr)
        return NO_CLEAN
    if lessthantwo:
-       print("SeqWare: Do not clean. Make JIRA ticket: locate or regenerate data.")
+       print("SeqWare: Do not clean. Make JIRA ticket: locate or regenerate data.", file=sys.stderr)
        return NO_CLEAN
    if morethantwo:
-       print("SeqWare: More than two fastqs. Clean. Make JIRA ticket.")
-       return CLEAN
+       print("SeqWare: More than two fastqs. Clean. Make JIRA ticket.", file=sys.stderr)
+       return CONTINUE
    if mismatchfilesize:
 #       print("SeqWare: Continue; possibly clean")
        return CONTINUE
@@ -171,7 +172,6 @@ def test_decisions_make_ius(fmap, tag, count, library, sw_size, fs_size, path):
 
 
 if __name__ == "__main__":
-    import sys
     parser = argparse.ArgumentParser(description="Searches for and reports the status of fastqs in SeqWare according to sequencer run name")
     parser.add_argument("--run", "-r", help="the name of the sequencer run, e.g. 111130_h801_0064_AC043YACXX", required=True)
     parser.add_argument("--fpr", "-f", help="The SeqWare file provenance report to search")

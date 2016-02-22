@@ -1,6 +1,6 @@
 #!/usr/bin/python
 from __future__ import print_function
-
+import sys
 import json
 import argparse
 import urllib2,ssl
@@ -46,10 +46,10 @@ def get_sequencer_runs(rname,url=oicrurl):
         rstr = urllib2.urlopen(url, context=ctx)
         runs=get_sequencer_run(rstr,rname)
     except urllib2.HTTPError, e:
-        print("HTTP error: %d" % e.code)
+        print("HTTP error: %d" % e.code, file=sys.stderr)
         sys.exit(e.code)
     except urllib2.URLError, e:
-        print("Network error: %s" % e.reason.args[1])
+        print("Network error: %s" % e.reason.args[1], file=sys.stderr)
         sys.exit(2)
     return runs
 
@@ -90,33 +90,33 @@ def decisions(runs, verbose=False):
         elif patt_run.match(r['state']):
             inprogress=True
     if verbose:
-        print("Run exists: ", exists, "\nRun succeeded: ", succeeded, "\nRun in progress: ", inprogress)
+        print("Run exists: ", exists, "\nRun succeeded: ", succeeded, "\nRun in progress: ", inprogress, file=sys.stderr)
     return(what_is_your_will(exists,inprogress,succeeded))
 
 def print_verbose(run):
-    print("name:\t",run['name'])
-    print("state:\t",run['state'])
-    print("date:\t",run['created_date'],"\n")
+    print("name:\t",run['name'], file=sys.stderr)
+    print("state:\t",run['state'], file=sys.stderr)
+    print("date:\t",run['created_date'],"\n", file=sys.stderr)
 
 def what_is_your_will(exists,inprogress,succeeded):
     if not exists:
-        print("Pinery: Delete folder; Add to JIRA ticket GP-596")
+        print("Pinery: Delete folder; Add to JIRA ticket GP-596", file=sys.stderr)
         return CLEAN
     if inprogress:
-        print("Pinery: Stop; do not clean")
+        print("Pinery: Stop; do not clean", file=sys.stderr)
         return NO_CLEAN
     if succeeded:
         #print("Pinery: Continue; possibly clean")
         return CONTINUE
     else:
-        print("Pinery: Run failed. Clean run")
+        print("Pinery: Run failed. Clean run", file=sys.stderr)
         return CLEAN
 
 
 
 
 if __name__ == "__main__":
-    import sys
+    
     parser = argparse.ArgumentParser(description="Searches for and reports the status of sequencer runs in Pinery")
     parser.add_argument("--run", "-r", help="the name of the sequencer run, e.g. 111130_h801_0064_AC043YACXX", required=True)
     parser.add_argument("--json", "-j", help="The sequencer run JSON file to search")
