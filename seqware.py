@@ -82,7 +82,7 @@ def pretty_print(header, table):
     for row in table:
        print(row_format.format(*row), file=sys.stderr)
 
-def decisions(fastqs,verbose=False):
+def decisions(fastqs,expected_lanes=8,verbose=False):
     morethantwo=False
     lessthantwo=False
     mismatchfilesize=False
@@ -90,6 +90,9 @@ def decisions(fastqs,verbose=False):
     problems=[]
     lanes=fastqs.keys()
     lanes.sort()
+    if len(lanes)!=expected_lanes:
+        smallfile=True
+        problems.append(["There are only "+str(len(lanes))+" lanes"])
     if verbose:
         verbose_out=[]
         #verbose_out.append("\t".join(["Lane","Barcode","Library","Count","SW Size", "FS Size", "Path"]))
@@ -125,12 +128,12 @@ def decisions(fastqs,verbose=False):
                 if verbose:
                     verbose_out.append(print_verbose(lane, ius,count,fastqs[lane][ius]['library'],swids[swid]))
 
-        #Test to see if the lane size is less than 20G
+        #Test to see if the lane size is less than 15G
         if verbose:
             print("Lane "+lane+" size:"+str(size/1e9)+"G", file=sys.stderr)
-        if size/1e9 < 20:
+        if size/1e9 < 15:
             smallfile=True
-            problems.insert(0,"\t".join(["Lane",lane,"size is <20G:",str(size/1e9)]))
+            problems.insert(0,"\t".join(["Lane",lane,"size is <15G:",str(size/1e9)]))
     if verbose:
         pretty_print(["Lane","Barcode","Library","Count","SW Size", "FS Size", "Path"],verbose_out)
     

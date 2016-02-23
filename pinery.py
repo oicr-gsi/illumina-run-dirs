@@ -112,8 +112,15 @@ def what_is_your_will(exists,inprogress,succeeded):
         print("Pinery: Run failed. Clean run", file=sys.stderr)
         return CLEAN
 
-
-
+def get_positions(runs):
+    positions=0
+    patt_comp=re.compile("Completed")
+    patt_run=re.compile("Running")
+    for r in runs:
+        if patt_comp.match(r['state']):
+            succeeded=True
+            positions=len(r['positions'])
+    return positions
 
 if __name__ == "__main__":
     

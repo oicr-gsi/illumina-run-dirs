@@ -20,7 +20,7 @@ def main(args):
     if args.verbose:
         print("------------------------\nSeqWare\n------------------------", file=sys.stderr)
     sruns = seqware.get_sequencer_run(args.run)
-    sresult = seqware.decisions(sruns,verbose=args.verbose)
+    sresult = seqware.decisions(sruns,expected_lanes=pinery.get_positions(pruns),verbose=args.verbose)
     if args.verbose:
         print("------------------------\nFINAL\n------------------------", file=sys.stderr)
         print("Pinery", str(presult), "\nJIRA", str(jresult), "\nSeqWare", str(sresult), file=sys.stderr)
