@@ -25,15 +25,15 @@ def main(args):
         print("------------------------\nFINAL\n------------------------", file=sys.stderr)
         print("Pinery", str(presult), "\nJIRA", str(jresult), "\nSeqWare", str(sresult), file=sys.stderr)
     if presult==pinery.CLEAN:
-        print(args.run, "Pinery", "Clean")
+        print("\t".join([args.run, "Pinery", "Clean"]))
     elif presult==pinery.NO_CLEAN:
-        print(args.run, "Pinery", "No Clean")
+        print("\t".join([args.run, "Pinery", "No Clean"]))
     elif jresult==jira.NO_CLEAN:
-        print(args.run, "JIRA","No Clean")
+        print("\t".join([args.run, "JIRA","No Clean"]))
     elif sresult==seqware.NO_CLEAN:
-        print(args.run, "SeqWare","No Clean")
+        print("\t".join([args.run, "SeqWare","No Clean"]))
     else:
-        print(args.run, "Everyone" "Clean")
+        print("\t".join([args.run, "Everyone" "Clean"]))
 
 
 
