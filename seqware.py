@@ -69,11 +69,18 @@ def get_sequencer_run(rname,filetype="chemical/seq-na-fastq-gzip",wfilter="Xenom
     return lanes
 
 def print_verbose(lane, ius, count, library, swid):
-    return "\t".join([lane, ius, library,str(count), str(swid['sw_size']), str(swid['fs_size']), swid['path'][:100]+"..."])
+    return [lane, ius, library,str(count), str(swid['sw_size']), str(swid['fs_size']), swid['path'][:100]+"..."]
 
 def details(lane,ius,library,problem):
     return "\t".join([lane, ius, library, problem])
 
+def pretty_print(header, table):
+    row_format=""
+    for t in table[0]:
+        row_format+="{:<"+str(len(t)+5)+"}"
+    print(row_format.format(*header),file=sys.stderr)
+    for row in table:
+       print(row_format.format(*row), file=sys.stderr)
 
 def decisions(fastqs,verbose=False):
     morethantwo=False
@@ -85,7 +92,7 @@ def decisions(fastqs,verbose=False):
     lanes.sort()
     if verbose:
         verbose_out=[]
-        verbose_out.append("\t".join(["Lane","Barcode","Library","Count","SW Size", "FS Size", "Path"]))
+        #verbose_out.append("\t".join(["Lane","Barcode","Library","Count","SW Size", "FS Size", "Path"]))
     #Iterate through each lane
     for lane in lanes:
         iuses=fastqs[lane].keys()
@@ -97,7 +104,7 @@ def decisions(fastqs,verbose=False):
             #Test if there are more than 2 files per IUS
             if count > 2:
                 morethantwo=True
-                problems.append(details(lane,ius,library,"Only "+str(count)+" files"))
+                problems.append(details(lane,ius,library,"Has too many files: "+str(count)))
             #Test if there are less than 2 files per IUS
             elif count < 2:
                 lessthantwo=True
@@ -125,8 +132,7 @@ def decisions(fastqs,verbose=False):
             smallfile=True
             problems.insert(0,"\t".join(["Lane",lane,"size is <20G:",str(size/1e9)]))
     if verbose:
-        for v in verbose_out:
-            print(v, file=sys.stderr)
+        pretty_print(["Lane","Barcode","Library","Count","SW Size", "FS Size", "Path"],verbose_out)
     
     if problems:
         import time
