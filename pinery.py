@@ -7,6 +7,7 @@ import urllib2,ssl
 import re
 oicrurl="https://pinery.hpc.oicr.on.ca:8443"
 
+DELETE=-1
 CLEAN=0
 NO_CLEAN=1
 CONTINUE=100
@@ -101,7 +102,7 @@ def print_verbose(run):
 def what_is_your_will(exists,inprogress,succeeded):
     if not exists:
         print("Pinery: Delete folder; Add to JIRA ticket GP-596", file=sys.stderr)
-        return CLEAN
+        return DELETE
     if inprogress:
         print("Pinery: Stop; do not clean", file=sys.stderr)
         return NO_CLEAN

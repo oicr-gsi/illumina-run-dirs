@@ -153,10 +153,11 @@ def what_is_your_will(morethantwo,lessthantwo,mismatchfilesize,smallfile):
        return NO_CLEAN
    if morethantwo:
        print("SeqWare: More than two fastqs. Clean. Make JIRA ticket.", file=sys.stderr)
-       return CONTINUE
+       return CONTINUE 
    if mismatchfilesize:
 #       print("SeqWare: Continue; possibly clean")
        return CONTINUE
+   return CLEAN
 
 def test_decisions():
     fastqs={}

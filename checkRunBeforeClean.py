@@ -22,19 +22,44 @@ def main(args):
     sruns = seqware.get_sequencer_run(args.run)
     sresult = seqware.decisions(sruns,expected_lanes=pinery.get_positions(pruns),verbose=args.verbose)
     if args.verbose:
-        print("------------------------\nFINAL\n------------------------", file=sys.stderr)
+        print("------------------------\n"+args.run+" FINAL \n------------------------", file=sys.stderr)
         print("Pinery", str(presult), "\nJIRA", str(jresult), "\nSeqWare", str(sresult), file=sys.stderr)
-    if presult==pinery.CLEAN:
-        print("\t".join([args.run, "Pinery", "Clean"]))
-    elif presult==pinery.NO_CLEAN:
-        print("\t".join([args.run, "Pinery", "No Clean"]))
-    elif jresult==jira.NO_CLEAN:
-        print("\t".join([args.run, "JIRA","No Clean"]))
-    elif sresult==seqware.NO_CLEAN:
-        print("\t".join([args.run, "SeqWare","No Clean"]))
-    else:
-        print("\t".join([args.run, "Everyone" "Clean"]))
 
+
+    result=[args.run]
+    decision="Clean"
+    pveto=False
+    jveto=False
+
+    if presult==pinery.CLEAN:
+        result.append("Pinery: Failed run")
+        decision="Clean"
+        pveto=True
+    elif presult==pinery.DELETE:
+        result.append("Pinery: Not in lims; Delete, add to GP-596")
+        decision="Delete"
+        pveto=True
+    elif presult==pinery.NO_CLEAN:
+        result.append("Pinery: In progress run")
+        decision="No Clean"
+        pveto=True
+
+    if jresult==jira.NO_CLEAN:
+        result.append("JIRA: Open tickets")
+        jveto=True
+        if not pveto:
+            decision="No Clean"
+
+    if sresult==seqware.NO_CLEAN:
+        result.append("SeqWare:No Clean")
+        if not pveto:
+            decision="No Clean"
+    elif sresult==seqware.CONTINUE:
+        result.append("SeqWare: issues detected")
+        if not pveto and not jveto:
+            decision="Clean"
+    result.insert(1,decision)
+    print("\t".join(result))
 
 
 if __name__ == "__main__":
