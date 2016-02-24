@@ -12,3 +12,5 @@ cd $outputDir;
 zip ${filePrefix}instrument_report.zip $filePrefix*$fileSuffix; 
 #  $ (cat mailtext; uuencode surfing.jpeg surfing.jpeg) | mail -s "subject" timothy.beck@oicr.on.ca
 ( cat mailtext.txt; uuencode ${filePrefix}instrument_report.zip ${filePrefix}instrument_report.zip ) | mail -s "$dateStamp wideInstrumentReport" ${emailUser};
+
+ln -s $outputDir/${filePrefix}instrument_report.zip /.mounts/labs/seqprodbio/private/backups/sqwprod-db.hpc.oicr.on.ca/wideInstrumentReport_latest.zip;
