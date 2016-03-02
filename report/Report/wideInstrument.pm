@@ -6,7 +6,7 @@ use Data::Dumper;
 use Cwd;
 
 our @ISA = qw (Exporter);
-our @EXPORT_OK = qw(get_instrument_report determineInstrument retrieveReadXML retrieveRunXML checkMissingFiles);
+our @EXPORT_OK = qw(get_instrument_report getXMLData determineInstrument retrieveReadXML retrieveRunXML checkMissingFiles);
 
 # Provide run name, lane, barcode and returns wide instrument report in JSON format of that specified sample
 sub get_instrument_report {
@@ -286,6 +286,31 @@ sub get_instrument_report {
 		$jsonReportHash{"Coverage Target"} = $jsonHash{$jsonFile}{"target file"};
 	}
     my $jsonString = encode_json( \%jsonReportHash );
+    return $jsonString;
+}
+sub getXMLData {
+	my ($runName, $lane) = @_;
+	my %jsonReportHash;
+
+	# Determine instrument and paths
+    my $instrument;
+    if ( $runName =~ /^\d{6}_(.*?)_.*/ ) {
+        $instrument = $1;
+    }
+    $instrument = parseInstrument($instrument);
+
+    # Read1.xml and Read2.xml
+    my $xmlPath = "/oicr/data/archive/$instrument/$runName/Data/reports/Summary";    
+    # RunInfo.xml   
+    my $runxmlPath = "/oicr/data/archive/$instrument/$runName"; 
+
+	$jsonReportHash{"Run"}     = $runName;
+    $jsonReportHash{"Lane"}    = $lane;
+    %jsonReportHash = retrieveReadXML ( $xmlPath, \%jsonReportHash, $lane );
+	%jsonReportHash = retrieveRunXML ( $runxmlPath, \%jsonReportHash, $lane );
+	%jsonReportHash = checkMissingFiles( $runxmlPath, $xmlPath, \%jsonReportHash );
+
+	my $jsonString = encode_json( \%jsonReportHash );
     return $jsonString;
 }
 
