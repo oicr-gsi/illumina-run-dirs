@@ -46,3 +46,17 @@ Run,Lane,Barcode,Library,Insert Mean,Insert Stdev,Read Length,R1 Phasing, R1 Pre
 150602_D00355_0086_BC6UA2ANXX,8,CGACTGGA,HALT_1651_Bm_R_PE_379_EX,202.63,72.10,126/126,0.275,0.239,0.127,0.111,0.25,0.24,270006964,95.32,0.967670556844631,0.948054604673045,0.940096214382176,150.141752016891,224.918369416632,41.6815753237864,43.744198822454,1.26825765688761,0.872094257036948,5682850244,111.016330477386,/.mounts/labs/PDE/data/TargetedSequencingQC/Agilent.SureSelect.All.Exon.V4/SureSelect_All_Exon_V4_Covered_Sorted.bed,Binary, - 
 ```
 If the instrument file input was the file provenance report, a new data file for each instrument will be created in the output directory.
+
+##WideInstrumentReport Perl Module
+Found in Report/wideInstrument.pm
+Simple perl module with two main functions:
+*	get_instrument_report
+	*	Takes in the run name, lane, and barcode and returns the entire wide instrument report in JSON format for that specified sample
+*	getXMLData
+	*	Takes in the run name and lane and returns the data from the XML files in JSON format for that specified lane
+	* Example output:
+	```
+	{"Comments":" - ","BIN":{"R2 PhiX Error %":0.409467741004798,"R2 Phasing":0.228595936399264,"PF %":86.4081196387993,"R2 Prephasing":0.213508105662186,"# Raw Clusters":344285167,"Source":"Binary","R1 Prephasing":0.171201561473329,"R1 Phasing":0.172009395040125,"R1 PhiX Error %":0.416431051560769},"Run":"160209_D00353_0127_AC8T56ANXX","Lane":"6"}
+	```
+Both can be tested using the script testWideInstrumentModule.pl
+

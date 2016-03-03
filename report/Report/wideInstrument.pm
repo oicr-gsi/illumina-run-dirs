@@ -6,7 +6,7 @@ use Data::Dumper;
 use Cwd;
 
 our @ISA = qw (Exporter);
-our @EXPORT_OK = qw(get_instrument_report getXMLData determineInstrument retrieveReadXML retrieveRunXML checkMissingFiles);
+our @EXPORT_OK = qw(get_instrument_report get_XML_Data determineInstrument retrieveReadXML retrieveRunXML checkMissingFiles);
 
 # Provide run name, lane, barcode and returns wide instrument report in JSON format of that specified sample
 sub get_instrument_report {
@@ -288,7 +288,8 @@ sub get_instrument_report {
     my $jsonString = encode_json( \%jsonReportHash );
     return $jsonString;
 }
-sub getXMLData {
+# Takes in run name and lane and returns data from the XML files in JSON format (lane specific info)
+sub get_XML_Data {
 	my ($runName, $lane) = @_;
 	my %jsonReportHash;
 

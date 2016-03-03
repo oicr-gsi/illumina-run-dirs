@@ -13,10 +13,11 @@ use warnings;
 use File::Basename qw(dirname);
 use Cwd qw(abs_path);
 use lib dirname(dirname abs_path $0) . '/Report';
-use Report::wideInstrument qw (get_instrument_report getXMLData);
+use Report::wideInstrument qw (get_instrument_report get_XML_Data);
 
 my $runName = "160209_D00353_0127_AC8T56ANXX";
 my $lane = "6";
 my $barcode = "CCGTCC";
+
 #print get_instrument_report ( $runName, $lane, $barcode );
-print getXMLData ( $runName, $lane );
+print get_XML_Data ( $runName, $lane );
