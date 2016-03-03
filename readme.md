@@ -52,7 +52,7 @@ Found in Report/wideInstrument.pm
 Simple perl module with two main functions:
 *	get_instrument_report
 	*	Takes in the run name, lane, and barcode and returns the entire wide instrument report in JSON format for that specified sample
-*	getXMLData
+*	get_XML_Data
 	*	Takes in the run name and lane and returns the data from the XML files in JSON format for that specified lane
 	* Example output:
 	```
