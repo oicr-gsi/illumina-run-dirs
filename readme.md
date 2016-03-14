@@ -49,6 +49,12 @@ If the instrument file input was the file provenance report, a new data file for
 
 ##WideInstrumentReport Perl Module
 Found in Report/wideInstrument.pm
+
+Example usage on cluster:
+```
+qsub -cwd -b y -N TestModule -e error.log -o output.log "export PERL5LIB=/oicr/local/analysis/lib/perl/pipe/lib/perl5; export PATH=${PATH}:/oicr/local/analysis/lib/perl/pipe/bin; perl testWideInstrumentModule.pl"
+```
+
 Simple perl module with two main functions:
 *	get_instrument_report
 	*	Takes in the run name, lane, and barcode and returns the entire wide instrument report in JSON format for that specified sample
