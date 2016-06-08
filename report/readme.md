@@ -1,10 +1,10 @@
-# illumina-run-dirs
+# illumina-run-dirs/report
 
 ##Introduction
 
-Illumina is a company that manufactures instruments used to sequence DNA including HiSeq and MiSeq. These sequencer runs produce large amounts of data that must be converted into human readable metrics for interpretation and analysis.
-The wideInstrumentReport.pl can take in JSON files produced for each run. If there is not a JSON report associated with the run, wideInstrumentReport.pl can also take in the RunInfo.xml file for brief run report detials.
-Another input that the wideInstrumentReport.pl can interpret is the file provenance report in the format of seqware_files_report_<date>(.gz) as it will extract the location of JSON files associated with each run and return it to the report.
+Illumina sequencer runs produce large amounts of data that must be converted into human readable metrics for interpretation and analysis. The wideInstrumentReport.pl can take in JSON files produced for each run. If there is not a JSON report associated with the run, wideInstrumentReport.pl can also take in the RunInfo.xml file for brief run report detials. Another input that the wideInstrumentReport.pl can interpret is the file provenance report in the format of seqware_files_report_<date>(.gz) as it will extract the location of JSON files associated with each run and return it to the report.
+
+Note that these scripts have been superceded by [Illumina's interop library](https://github.com/Illumina/interop) and that should be used instead of parsing these binaries in the future.
 
 ##How to Use through Command Prompt
 
