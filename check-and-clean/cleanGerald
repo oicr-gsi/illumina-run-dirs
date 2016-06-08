@@ -1,0 +1,64 @@
+#/bin/bash
+exec > >(tee -a cleanGERALD.txt)
+exec 2>&1
+
+printf "%s TIMESTAMP\n" `date +%Y%m%dT%H%M%S`
+THISPATH=`pwd`
+THISDIR=`basename $THISPATH`
+printf "Processing: %s\n" $THISDIR
+#if echo $1 > awk '$1 !~ /[0-9]{6}_[A-Za-z]{1}[0-9]{3,5}_[0-9]{4}_[A-Z0-9]{10}/ {exit 1}'; then
+#       printf "\nThis dir \'%s\' does not look like an illumina run directory\n\n" $1
+#       exit 1
+#fi
+# Nice use of bash regex's
+#GERALD_15-01-2009_rdeborja
+if [[ ! $THISDIR =~ GERALD_[0-9]{2}-[0-9]{2}-[0-9]{4}_[a-zA-Z]{2,8} ]];then
+        printf "The dir $THISDIR does not look like an illumina Gerald directory\n\n";
+        exit 1;
+fi
+# Bash control operators
+#command1 && command2
+#   command2 is executed if, and only if, command1 returns an exit status of zero.
+#An OR list has the form
+#command1 || command2
+#   command2 is executed if and only if command1 returns a non-zero exit status.  The return status of AND and OR lists is the exit status of the last command executed in the list.
+
+set -x
+find . -type f -name '*.sequence.txt' -print0 | xargs -0 -I'{}' qsub -N zip$THISDIR -cwd -o sgeLog -e sgeLog -b y "gzip \"{}\"" 
+rm *.o[0-9]*
+rm *.e[0-9]*
+rm *qval.txt.gz
+rm *results.tim
+rm -f *eland_extended.txt*
+rm -f *eland_query.txt*
+rm -f *eland_multi.txt*
+rm -f *eland_result.txt*
+rm *all.png
+rm *errors.png
+rm *rescore.png
+rm *anomaly.txt
+rm *frag.txt
+rm *qraw.txt
+rm *sorted.txt
+rm *score.txt
+rm *rescore.txt
+rm *qcal.txt
+rm *qref.txt
+rm *qval_file_pair.txt
+rm *filt.txt
+rm *anomraw.txt
+rm *saf.txt
+rm *seqpre.txt
+rm *qtable.txt
+rm *qreport.txt
+rm -f *export.txt
+rm *prealign.txt
+rm *realign.txt
+rm *rescore.txt
+rm *align.txt
+rm *qcalreport.txt
+rm -rf Temp
+rm -rf Stats
+rm -rf qval
+printf "%s TIMESTAMP\n" `date +%Y%m%dT%H%M%S`
+

@@ -1,0 +1,58 @@
+#!/bin/bash
+exec > >(tee -a cleanOICR.txt)
+exec 2>&1
+
+#set -x
+# For Illumina run dirs, in the GERALD were we have illumina .sequence and .export files and the oicr/postprocessing dir, here are the rules:
+#
+# ONLY keep the .fastq equivalent - this is the .sequence file. If there is no sequence file, keep the .export file
+# below oicr/postprocessing - truncate -s0 anything bigger than 1G
+#
+printf "%s TIMESTAMP\n" `date +%Y%m%dT%H%M%S`
+THISPATH=`pwd`
+THISDIR=`basename $THISPATH`
+printf "Processing: %s\n" $THISPATH
+#if echo $1 > awk '$1 !~ /[0-9]{6}_[A-Za-z]{1}[0-9]{3,5}_[0-9]{4}_[A-Z0-9]{10}/ {exit 1}'; then
+#       printf "\nThis dir \'%s\' does not look like an illumina run directory\n\n" $1
+#       exit 1
+#fi
+# Nice use of bash regex's
+#GERALD_15-01-2009_rdeborja
+if [[ ! $THISDIR =~ postProcessing ]];then
+	printf "The dir $THISDIR does not look like an oicr postprocessing directory\n\n";
+   exit 1;
+fi
+
+# Bash control operators
+#command1 && command2
+#   command2 is executed if, and only if, command1 returns an exit status of zero.
+#An OR list has the form
+#command1 || command2
+#   command2 is executed if and only if command1 returns a non-zero exit status.  The return status of AND and OR lists is the exit status of the last command executed in the list.
+
+set -x
+rm -rf ./bwa
+rm -rf ./bowtie
+rm -rf ./samtools 
+rm -rf ./maq
+rm -rf ./enrichment
+rm -rf ./dcc
+rm -rf ./novoalign
+rm -rf ./casava
+rm -rf ./ewig
+find ./insertsizeplot -name '*stats.txt' | xargs truncate -s0
+find ./blast -name '*count' | xargs rm 
+find ./blast -name 'tmp' -type d | xargs rm -rf 
+find ./blast -name '*.blastoutput' -type f | xargs rm -rf 
+find ./blast -name 'seq_positions' -type f | xargs rm -rf 
+find ./blast -name '*seq_positions.txt' -type f | xargs rm -rf 
+find ./bwa -name '*.ba[mi]' -type f | xargs truncate -s0 
+find ./bwa -name '*.modified.gz' -type f | xargs truncate -s0 
+find ./bwa -name '*sequence.txt.gz' -type f | xargs truncate -s0 
+find ./bwa -name '*.ba[mi]' -type f | xargs truncate -s0 
+find ./novoalign* \( -name '*.bam' -o -name '*.sam' -o -name '*.err' -o -name '*.out' \) -type f | xargs truncate -s0
+find . -regextype posix-extended -regex '.*\.(e|o)[0-9]{7}$' -type f | xargs rm -rf   # Catch all SGE logs
+
+printf "%s TIMESTAMP\n" `date +%Y%m%dT%H%M%S`
+
+

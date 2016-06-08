@@ -1,0 +1,4 @@
+#!/bin/bash
+# Outputs sorted list - easy to see if one dir has not been cleaned
+(find . -maxdepth 2 -name '*.TIM' -type f; find . -maxdepth 1  ! -name '.' -type d) | sort
+

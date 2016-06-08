@@ -1,0 +1,33 @@
+#!/bin/bash
+exec > >(tee cleanData.txt)
+exec 2>&1
+
+printf "%s TIMESTAMP\n" `date +%Y%m%dT%H%M%S`
+THISPATH=`pwd`
+THISDIR=`basename $THISPATH`
+printf "Processing: %s\n" $THISPATH
+# Nice use of bash regex's
+#091203_I580_612ET_LT
+#101202_SN203_0090_B808P7ABXX
+if [[ ! ( $THISPATH =~ [0-9]{6}_[A-Za-z0-9]{4,6}_[0-9A-Z]{5,6}_[0-9A-Z]{2,3} ||
+        $THISPATH =~ [0-9]{6}_[A-Za-z0-9]{4,6}_[0-9]{4}_[0-9A-Z]{10}  )     ||
+    ! $THISDIR =~ Data ]];then
+        printf "The dir $THISDIR does not look like an illumina run directory\n\n";
+        exit 1;
+fi
+# Bash control operators
+#command1 && command2
+#   command2 is executed if, and only if, command1 returns an exit status of zero.
+#An OR list has the form
+#command1 || command2
+#   command2 is executed if and only if command1 returns a non-zero exit status.  The return status of AND and OR lists is the exit status of the last command executed in the list.
+
+set -x
+mkdir -p ./sgeLog
+rm -rf CopyLog.txt
+rm -rf ErrorLog.txt
+rm -rf Log.txt
+rm -rf ./TileStatus
+rm -rf ./RunBrowser
+set +x
+printf "%s TIMESTAMP\n" `date +%Y%m%dT%H%M%S`
