@@ -3,8 +3,8 @@ Scripts for checking and cleaning Illumina instrument run directories.
 
 There are two components to cleaning run folders.
 
-# checking for problems
-# cleaning the run 
+1. checking for problems
+2. cleaning the run 
 
 The most time-consuming process for the user is checking for problems. It involves examining the output of the checkRunBeforeClean script, looking it over, doing an initial diagnosis on the problems if they exist, making tickets and flagging the run on the filesystem, and then sending it for cleaning. Cleaning also takes a long time but it's hands-off once it is launched.
 
