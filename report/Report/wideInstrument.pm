@@ -292,17 +292,15 @@ sub get_XML_Data {
 	my ($runName, $lane) = @_;
 	my %jsonReportHash;
 
-	# Determine instrument and paths
-    my $instrument;
-    if ( $runName =~ /^\d{6}_(.*?)_.*/ ) {
-        $instrument = $1;
+	my $lastChar = substr $runPath, -1, 1;
+    if ($lastChar ne "/") {
+    	$runPath = "$runPath/";
     }
-    $instrument = parseInstrument($instrument);
 
     # Read1.xml and Read2.xml
-    my $xmlPath = "/oicr/data/archive/$instrument/$runName/Data/reports/Summary";    
+    my $xmlPath = "$path$runName/Data/reports/Summary";    
     # RunInfo.xml   
-    my $runxmlPath = "/oicr/data/archive/$instrument/$runName"; 
+    my $runxmlPath = "$path$instrument/$runName"; 
 
 	$jsonReportHash{"Run"}     = $runName;
     $jsonReportHash{"Lane"}    = $lane;
@@ -312,28 +310,6 @@ sub get_XML_Data {
 
 	my $jsonString = encode_json( \%jsonReportHash );
     return $jsonString;
-}
-
-# Parses intrument into format that can be found in the file system
-sub parseInstrument {
-    my ($instrument) = @_;
-
-    # need to adjust instrument name to directory name
-    if ( $instrument =~ /^(h|i)/i ) {
-        $instrument = lc $instrument;
-    }
-    elsif ( $instrument =~ /^m/i ) {
-        $instrument = "m" . substr( $instrument, 3 );
-    }
-    elsif ( $instrument =~ /^SN/ ) {
-        if ( $instrument =~ /\w{2}\d{7}/ ) {
-            $instrument = "h" . substr( $instrument, 5 );
-        }
-        elsif ( $instrument =~ /\w{2}\d{3}/ ) {
-            $instrument = "h" . substr( $instrument, 2 );
-        }
-    }
-    return $instrument;
 }
 
 # Counts total number of reading errors of a cycle based on either mismatch, insertion, or deletion errors
