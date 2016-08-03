@@ -10,23 +10,22 @@ our @EXPORT_OK = qw(get_instrument_report get_XML_Data determineInstrument retri
 
 # Provide run name, lane, barcode and returns wide instrument report in JSON format of that specified sample
 sub get_instrument_report {
-    my ( $runName, $lane, $barcode ) = @_;
+    my ( $runPath, $runName, $lane, $barcode ) = @_;
     my %jsonHash;
     my %jsonReportHash;
 
-    # Determine instrument and paths
-    my $instrument;
-    if ( $runName =~ /^\d{6}_(.*?)_.*/ ) {
-        $instrument = $1;
+    # make path end with a /
+    my $lastChar = substr $runPath, -1, 1;
+    if ($lastChar ne "/") {
+    	$runPath = "$runPath/";
     }
-    $instrument = parseInstrument($instrument);
     # Read1.xml and Read2.xml
-    my $xmlPath = "/oicr/data/archive/$instrument/$runName/Data/reports/Summary";    
+    my $xmlPath = "$runPath$runName/Data/reports/Summary";    
     # RunInfo.xml   
-    my $runxmlPath = "/oicr/data/archive/$instrument/$runName";    
+    my $runxmlPath = "$runPath$runName";    
 
     # Determine jsonFile location
-    my $jsonFilePath = "/oicr/data/archive/${instrument}/${runName}/jsonReport";
+    my $jsonFilePath = "${runPath}${runName}/jsonReport";
     my @jsonFiles;
     my $jsonFile;
     if ( -d $jsonFilePath ) {
@@ -795,30 +794,30 @@ sub retrieveRunXML {
 	# assigns retrieved data to the report hash classified as BIN data
 	# metric codes correspond to different metric values based on the value of read1 and read2
 	# More info - refer to Tile Metric Code Legend above or illumina's RTA Theory of Operations documentation
-        $jsonReportHash{"BIN"}{"R1 Phasing"} =
+        $jsonReportHash{"R1 Phasing"} =
           $metricHashref->{$lane}{ ( 200 + ( $read1 - 1 ) * 2 ) }{value};
-        $jsonReportHash{"BIN"}{"R1 Prephasing"} =
+        $jsonReportHash{"R1 Prephasing"} =
           $metricHashref->{$lane}{ ( 201 + ( $read1 - 1 ) * 2 ) }{value};
-        $jsonReportHash{"BIN"}{"R1 PhiX Error %"} =
+        $jsonReportHash{"R1 PhiX Error %"} =
           $errorHashref->{$lane}{$read1}{value};
 
-        $jsonReportHash{"BIN"}{"R2 Phasing"} =
+        $jsonReportHash{"R2 Phasing"} =
           $metricHashref->{$lane}{ ( 200 + ( $read2 - 1 ) * 2 ) }{value};
-        $jsonReportHash{"BIN"}{"R2 Prephasing"} =
+        $jsonReportHash{"R2 Prephasing"} =
           $metricHashref->{$lane}{ ( 201 + ( $read2 - 1 ) * 2 ) }{value};
-        $jsonReportHash{"BIN"}{"R2 PhiX Error %"} =
+        $jsonReportHash{"R2 PhiX Error %"} =
           $errorHashref->{$lane}{$read2}{value};
 
-        $jsonReportHash{"BIN"}{"# Raw Clusters"} =
+        $jsonReportHash{"# Raw Clusters"} =
           $metricHashref->{$lane}{102}{value};
 
         # PF % = (# clusters passing filters) / (total cluster) * 100
-        $jsonReportHash{"BIN"}{"PF %"} =
+        $jsonReportHash{"PF %"} =
           ( $metricHashref->{$lane}{103}{value} /
               $metricHashref->{$lane}{102}{value} ) * 100
           if $metricHashref->{$lane}{102}{value};
 
-        $jsonReportHash{"BIN"}{"Source"} = "Binary";
+        $jsonReportHash{"Source"} = "Binary";
 
         # reports instances of 'not a number' values in comments
         $jsonReportHash{"Comments"} =
