@@ -27,19 +27,21 @@ def main(args):
 
 
 def get_jira_username_pass(username):
-    if "JIRA_AUTH_FILE" in os.environ:
-        passfile=os.environ['JIRA_AUTH_FILE']
+    if "JIRA_AUTH" in os.environ:
+        passfile=os.environ['JIRA_AUTH']
+        if re.match(username+":[.]*", passfile):
+          return passfile.strip()
     else:
         passfile=os.environ['HOME']+"/.jira"
-    if not os.path.exists(passfile):
-        raise IOError("JIRA auth file not found. Set JIRA_AUTH_FILE or ~/.jira")
-    if os.stat(passfile).st_mode & (stat.S_IRWXG | stat.S_IRWXO):
-        raise IOError("JIRA auth file should have permissions 700: "+passfile)
-    with open(passfile) as jfile:
-        for l in jfile:
-            if re.match(username+":[.]*", l):
+        if not os.path.exists(passfile):
+          raise IOError("JIRA auth file not found. Set JIRA_AUTH or ~/.jira")
+        if os.stat(passfile).st_mode & (stat.S_IRWXG | stat.S_IRWXO):
+          raise IOError("JIRA auth file should have permissions 700: "+passfile)
+        with open(passfile) as jfile:
+          for l in jfile:
+             if re.match(username+":[.]*", l):
                 return l.strip()
-    raise IOError("No matching username "+username+" in "+passfile)
+        raise IOError("No matching username "+username+" in "+passfile)
 
 def get_sequencer_runs(rname,username,url=oicrurl):
     """
