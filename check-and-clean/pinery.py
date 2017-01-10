@@ -5,8 +5,8 @@ import json
 import argparse
 import urllib2,ssl
 import re
-oicrurl="https://pinery.hpc.oicr.on.ca:8443"
-
+#oicrurl="https://pinery.hpc.oicr.on.ca:8443/pinery"
+oicrurl="http://10.30.128.100:8080/pinery-ws-gsle"
 DELETE=-1
 CLEAN=0
 NO_CLEAN=1
@@ -30,7 +30,7 @@ def get_sequencer_run(runs_obj, rname):
     runs=[]
     allruns=json.load(runs_obj)
     for i in allruns:
-        if re.search(rname,i['name']):
+        if re.search(rname,i['name'], re.IGNORECASE):
             runs.append(i)
     return runs
 
@@ -42,7 +42,7 @@ def get_sequencer_runs(rname,url=oicrurl):
     ctx = ssl.create_default_context()
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
-    url=url+"/pinery/sequencerruns"
+    url=url+"/sequencerruns"
     try:
         rstr = urllib2.urlopen(url, context=ctx)
         runs=get_sequencer_run(rstr,rname)
@@ -64,7 +64,20 @@ def open_json(filename,rname):
     return runs
        
 
-
+def get_pinery_obj(url):
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    try:
+        sam = urllib2.urlopen(url, context=ctx)
+        sample=json.load(sam)
+    except urllib2.HTTPError, e:
+        print("HTTP error: %d" % e.code, file=sys.stderr)
+        sys.exit(e.code)
+    except urllib2.URLError, e:
+        print("Network error: %s" % e.reason.args[1], file=sys.stderr)
+        sys.exit(2)
+    return sample
 
 
 def decisions(runs, verbose=False):
@@ -87,7 +100,10 @@ def decisions(runs, verbose=False):
                  pos={}
                  pos['lane']=p['position']
                  pos['num_samples']=len(p['samples'])
+                 pos['exsample_url']=p['samples'][0]['url']
                  positions.append(pos)
+                 if verbose:
+                     print_verbose_position(pos)
         elif patt_run.match(r['state']):
             inprogress=True
     if verbose:
@@ -98,6 +114,9 @@ def print_verbose(run):
     print("name:\t",run['name'], file=sys.stderr)
     print("state:\t",run['state'], file=sys.stderr)
     print("date:\t",run['created_date'],"\n", file=sys.stderr)
+
+def print_verbose_position(pos):
+    print("Lane:",pos['lane'],"\tNum Libraries:",pos['num_samples'],"\tExample: ", get_pinery_obj(pos['exsample_url'])['name'], file=sys.stderr)
 
 def what_is_your_will(exists,inprogress,succeeded):
     if not exists:

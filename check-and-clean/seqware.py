@@ -38,7 +38,7 @@ def get_sequencer_run(rname,filetype="chemical/seq-na-fastq-gzip",wfilter="Xenom
     with gzip.open(fpr) as tsv:
         #match fastqs from specific runs that are not from Xenome
         fastq_matcher=re.compile(filetype)
-        run_matcher=re.compile(rname.strip())
+        run_matcher=re.compile(rname.strip(), re.IGNORECASE)
         filter_matcher=re.compile(wfilter)
 
 	#parse the report into a map

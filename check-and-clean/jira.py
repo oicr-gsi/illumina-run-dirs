@@ -47,21 +47,18 @@ def get_sequencer_runs(rname,username,url=oicrurl):
     """
     Gets all of the tickets that talk about rname using creds from username
     """
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-    request = urllib2.Request(url+"/rest/api/2/search?jql=text~"+rname)
-    request.add_header("Authorization", b'Basic '+base64.b64encode(get_jira_username_pass(username)))
+    request_url=url+"/rest/api/2/search?jql=text~"+rname
+    request = urllib2.Request(request_url)
+    base64string = base64.encodestring(get_jira_username_pass(username)).replace('\n', '')
+    request.add_header("Authorization", "Basic %s" % base64string)   
     request.add_header("Content-Type","application/json")
     try:
-        result = urllib2.urlopen(request,context=ctx)
+        result = urllib2.urlopen(request)
         tickets=json.load(result)
     except urllib2.HTTPError, e:
         print("HTTP error: %d" % e.code, file=sys.stderr)
-        sys.exit(e.code)
     except urllib2.URLError, e:
         print("Network error: %s" % e.reason.args[1], file=sys.stderr)
-        sys.exit(2)
     return tickets
 
 
@@ -108,4 +105,4 @@ if __name__ == "__main__":
     if args.json is None and args.username is None:
         print("At least one of --json or --username must be supplied")
         sys.exit(1)
-    system.exit(main(args))
+    sys.exit(main(args))
