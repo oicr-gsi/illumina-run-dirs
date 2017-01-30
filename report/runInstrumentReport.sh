@@ -7,7 +7,7 @@ instruments=/oicr/data/archive/@([A-Z][0-9])*
 outputDir=/oicr/data/archive/web/wideInstrumentReport
 runDir=~seqprodbio/illumina-run-dirs/report
 
-zipRecipients="lee.timms@oicr.on.ca,kristen.geras@oicr.on.ca,karolina.czajka@oicr.on.ca,jeremy.johns@oicr.on.ca,seqprodbio@lists.oicr.on.ca"
+zipRecipients="lee.timms@oicr.on.ca,jeremy.johns@oicr.on.ca,seqprodbio@lists.oicr.on.ca"
 logRecipients="maria.cheng@oicr.on.ca"
 
 ymd="`date "+%y%m%d"`"
