@@ -5,8 +5,9 @@ import json
 import argparse
 import urllib2,ssl
 import re
-#oicrurl="https://pinery.hpc.oicr.on.ca:8443/pinery"
-oicrurl="http://10.30.128.100:8080/pinery-ws-gsle"
+#oicrurl_M="http://pinery.gsi.oicr.on.ca:8080/pinery-ws-miso"
+oicrurl="http://pinery.gsi.oicr.on.ca:8080/pinery-ws-gsle"
+
 DELETE=-1
 CLEAN=0
 NO_CLEAN=1

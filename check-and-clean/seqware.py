@@ -5,7 +5,7 @@ import re,csv
 import argparse
 import gzip
 import os
-oicrfpr="/.mounts/labs/seqprodbio/private/backups/sqwprod-db.hpc.oicr.on.ca/seqware_files_report_latest.gz"
+oicrfpr="/.mounts/labs/seqprodbio/private/backups/sqwprod2-db.hpc.oicr.on.ca/seqware_files_report_latest.tsv.gz"
 
 NO_CLEAN=1
 CLEAN=0
