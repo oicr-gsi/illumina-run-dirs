@@ -49,6 +49,12 @@ It uses the name of the sequencer run directory to query OICR services to determ
 
 Because of the requirement to authenticate in JIRA, this script should be run as yourself and not an instrument user (e.g. sbsuser).
 
+If you must run using an insecure account, set the JIRA\_AUTH environment variable (and make sure that bash history immediately forgets about it).
+
+    history -d $((HISTCMD-1)) && export JIRA_AUTH='mtaschuk:************'
+
+
+
 ```
 usage: checkRunBeforeClean.py [-h] --run RUN [--verbose] --username USERNAME
 Searches for and reports the status of issues in JIRA
