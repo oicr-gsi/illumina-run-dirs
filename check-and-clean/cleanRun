@@ -1,5 +1,5 @@
 #!/bin/bash
-exec > >(tee cleanRun.txt)
+exec >> "cleanRun.txt"
 exec 2>&1
 
 # Where is this script? we expect jq-linux-x86_64-static to be local with this script
@@ -19,7 +19,8 @@ if [[ "$*" =~ "no-check" ]]; then
 elif [[ ! ( $THISDIR =~ [0-9]{6}_[A-Za-z0-9]{4,6}_[0-9A-Z]{5,6}_[0-9A-Z]{2,3}   ||
         $THISPATH =~ [0-9]{6}_[A-Za-z0-9]{4,6}_[0-9]{4}_[0-9A-Z]{10}        ||
         $THISPATH =~ [0-9]{6}_SN[A-Za-z0-9]{4,7}_[0-9]{4}_[0-9A-Z]{10} ||
-        $THISPATH =~ [0-9]{6}_SN[A-Za-z0-9]{4,7}_[0-9]{4}_[0-9A-Za-z]{10}
+        $THISPATH =~ [0-9]{6}_SN[A-Za-z0-9]{4,7}_[0-9]{4}_[0-9A-Za-z]{10} ||
+        $THISPATH =~ [0-9]{6}_M[A-Za-z0-9]{4,7}_[0-9]{4}_[A0]{8,10}-[0-9A-Za-z]{5}
 
 )  ]];then
         printf "The dir $THISDIR does not look like an illumina run directory\n\n";
@@ -49,7 +50,7 @@ find . -type d -name 'Intensities' | xargs -I'{}' bash -c "cd {}; $SCRIPT_DIR/cl
 find . -type d -name 'Bustard*' | xargs -I'{}' bash -c "cd {}; $SCRIPT_DIR/cleanBustard"
 find . -type d -name '*Firecrest*' | xargs -I'{}' bash -c "cd {}; $SCRIPT_DIR/cleanFirecrest"
 find . -type d -name 'Data' | xargs -I'{}' bash -c "cd {}; $SCRIPT_DIR/cleanData"
-find . -type f ! \( -name 'cleanRun.txt' -o -name 'check*.txt' -o -name 'CLEANED.TIM' \) -a \( -name '*.txt' -o -name '*.log' -o -name '*.cfg' -o -name '*.xml' -o -name '*.csv' \) -print0 | xargs -0 -I'{}' qsub -N zip$THISDIR -cwd -o sgeLog -e sgeLog -b y "gzip \"{}\""  
+find . -type f ! \( -name 'cleanRun.txt' -o -name 'check*.txt' -o -name 'CLEANED.TIM' -o -name 'RunInfo.xml' -o -name 'runParameters.xml' -o -name 'RunParameters.xml' \) -a \( -name '*.txt' -o -name '*.log' -o -name '*.cfg' -o -name '*.xml' -o -name '*.csv' \) -print0 | xargs -0 -I'{}' qsub -N zip$THISDIR -cwd -o sgeLog -e sgeLog -b y "gzip \"{}\""  
 # Could have a bit of a race here with launched gzipping jobs running while script below is calcing space used. No showstopper - just some error messages in log file
 sleep 60  # weak attempt to prevent error messages in script below
 $SCRIPT_DIR/cleaned
