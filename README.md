@@ -1,4 +1,4 @@
-#illumina-run-dirs
+# illumina-run-dirs
 
 This project contains scripts used for working with Illumina sequencer run data, including HiSeq 2000/2500, MiSeqs and NextSeqs.
 
