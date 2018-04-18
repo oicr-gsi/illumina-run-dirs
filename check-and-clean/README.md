@@ -67,7 +67,13 @@ optional arguments:
                         The username to use for JIRA
 ```
 
-This script searches OICR resources and will make a decision on how to proceed with the run. 
+Example command lines:
+
+```
+python checkRunBeforeClean.py --run 180320_A00469_0007_AHCHTWDMXX --username mtaschuk
+```
+
+
 
 ### Output
 The script prints a single line (in non-verbose mode) to standard out with the following columns:
