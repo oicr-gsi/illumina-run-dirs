@@ -6,7 +6,7 @@ import argparse
 import urllib2,ssl
 import re
 oicrurl="http://seqbio-pinery-prod-www.hpc.oicr.on.ca:8080/pinery-ws-miso"
-
+#oicrurl="http://pinery.gsi.oicr.on.ca:8080/pinery-ws-gsle"
 DELETE=-1
 CLEAN=0
 NO_CLEAN=1
