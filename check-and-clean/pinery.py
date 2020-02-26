@@ -5,8 +5,9 @@ import json
 import argparse
 import urllib2,ssl
 import re
-oicrurl="http://seqbio-pinery-prod-www.hpc.oicr.on.ca:8080/pinery-ws-miso"
-#oicrurl="http://pinery.gsi.oicr.on.ca:8080/pinery-ws-gsle"
+
+oicrurl="http://seqbio-pinery-prod-www.hpc.oicr.on.ca:8080/pinery-ws-miso/"
+
 DELETE=-1
 CLEAN=0
 NO_CLEAN=1
@@ -15,11 +16,11 @@ CONTINUE=100
 def main(args):
     if args.url is not None:
         url=args.url
-    if args.json is None:
+    if args.json is None and not args.offline:
         runs = get_sequencer_runs(args.run,url=url)
     else: 
         runs = open_json(args.json,args.run)
-    return(decisions(runs,verbose=args.verbose))
+    return(decisions(runs,verbose=args.verbose,offline=args.offline))
 
 
 def get_sequencer_run(runs_obj, rname):
@@ -47,10 +48,10 @@ def get_sequencer_runs(rname,url=oicrurl):
         rstr = urllib2.urlopen(url, context=ctx)
         runs=get_sequencer_run(rstr,rname)
     except urllib2.HTTPError, e:
-        print("HTTP error: %d" % e.code, file=sys.stderr)
+        print("Pinery HTTP error: %d" % e.code, file=sys.stderr)
         sys.exit(e.code)
     except urllib2.URLError, e:
-        print("Network error: %s" % e.reason.args[1], file=sys.stderr)
+        print("Pinery Network error: %s" % e.reason.args[1], file=sys.stderr)
         sys.exit(2)
     return runs
 
@@ -72,15 +73,15 @@ def get_pinery_obj(url):
         sam = urllib2.urlopen(url, context=ctx)
         sample=json.load(sam)
     except urllib2.HTTPError, e:
-        print("HTTP error: %d" % e.code, file=sys.stderr)
+        print("Pinery HTTP error: %d" % e.code, file=sys.stderr)
         sys.exit(e.code)
     except urllib2.URLError, e:
-        print("Network error: %s" % e.reason.args[1], file=sys.stderr)
+        print("Pinery Network error: %s" % e.reason.args[1], file=sys.stderr)
         sys.exit(2)
     return sample
 
 
-def decisions(runs, verbose=False):
+def decisions(runs, verbose=False, offline=False):
     succeeded=False
     inprogress=False
     exists=False
@@ -99,11 +100,15 @@ def decisions(runs, verbose=False):
             for p in r['positions']:
                  pos={}
                  pos['lane']=p['position']
-                 pos['num_samples']=len(p['samples'])
-                 pos['exsample_url']=p['samples'][0]['url']
+                 if 'samples' in p:
+                     pos['num_samples']=len(p['samples'])
+                     pos['exsample_url']=p['samples'][0]['url']
+                 else:
+                     pos['num_samples']="Unknown"
+                     pos['exsample_url']="Unknown"
                  positions.append(pos)
                  if verbose:
-                     print_verbose_position(pos)
+                     print_verbose_position(pos,offline)
         elif patt_run.match(r['state']):
             inprogress=True
     if verbose:
@@ -115,8 +120,11 @@ def print_verbose(run):
     print("state:\t",run['state'], file=sys.stderr)
     print("date:\t",run['created_date'],"\n", file=sys.stderr)
 
-def print_verbose_position(pos):
-    print("Lane:",pos['lane'],"\tNum Libraries:",pos['num_samples'],"\tExample: ", get_pinery_obj(pos['exsample_url'])['name'], file=sys.stderr)
+def print_verbose_position(pos,offline=False):
+    if pos['exsample_url'] == "Unknown" or offline:
+        print("Lane:",pos['lane'],"\tNum Libraries:",pos['num_samples'],file=sys.stderr)
+    else:
+        print("Lane:",pos['lane'],"\tNum Libraries:",pos['num_samples'],"\tExample: ", get_pinery_obj(pos['exsample_url'])['name'], file=sys.stderr)
 
 def what_is_your_will(exists,inprogress,succeeded):
     if not exists:
@@ -147,7 +155,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Searches for and reports the status of sequencer runs in Pinery")
     parser.add_argument("--run", "-r", help="the name of the sequencer run, e.g. 111130_h801_0064_AC043YACXX", required=True)
     parser.add_argument("--json", "-j", help="The sequencer run JSON file to search")
-    parser.add_argument("--url", help="the pinery URL. Default: https://pinery.hpc.oicr.on.ca:8443")
+    parser.add_argument("--url", help=" ".join(["the pinery URL. Default: ",oicrurl]))
+    parser.add_argument("--offline", "-o", help="Run in offline mode (don't attempt to contact Pinery). Should be used in combination with --json option.", action="store_true");
     parser.add_argument("--verbose","-v", help="Verbose logging",action="store_true")
     args=parser.parse_args()
-    system.exit(main(args))
+    sys.exit(main(args))

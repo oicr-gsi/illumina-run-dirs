@@ -6,6 +6,7 @@ import argparse
 import gzip
 import os
 oicrfpr="/.mounts/labs/seqprodbio/private/backups/seqware_files_report_latest.tsv.gz"
+#oicrfpr="/u/sbsuser/run_dir_cleanup/shesmu_check/fpr.tsv.gz"
 
 NO_CLEAN=1
 CLEAN=0
@@ -131,9 +132,9 @@ def decisions(fastqs,expected_lanes=8,verbose=False):
         #Test to see if the lane size is less than 15G
         if verbose:
             print("Lane "+lane+" size:"+str(size/1e9)+"G", file=sys.stderr)
-        if size/1e9 < 15:
-            smallfile=True
-            problems.insert(0,"\t".join(["Lane",lane,"size is <15G:",str(size/1e9)]))
+#        if size/1e9 < 2:
+#            smallfile=True
+#            problems.insert(0,"\t".join(["Lane",lane,"size is <15G:",str(size/1e9)]))
     if verbose and len(verbose_out)>0:
         pretty_print(["Lane","Barcode","Library","Count","SW Size", "FS Size", "Path"],verbose_out)
     
