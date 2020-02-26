@@ -10,12 +10,20 @@ def main(args):
         import time
         print(time.strftime("%d/%m/%Y %H:%M:%S"),args.run, file=sys.stderr)
         print("------------------------\nPinery\n------------------------", file=sys.stderr)
-    #pruns = pinery.get_sequencer_runs(args.run)
-    pruns = pinery.open_json("/u/sbsuser/run_dir_cleanup/sequencerruns.json",args.run)
-    presult = pinery.decisions(pruns, verbose=args.verbose, offline=True)
+    if args.pineryjson:
+         pruns = pinery.open_json(args.pineryjson,args.run)
+    elif args.offline:
+        print("If running in offline mode, supply a Pinery JSON file.")
+        exit(1)
+    else:
+         pruns = pinery.get_sequencer_runs(args.run)
+    presult = pinery.decisions(pruns, verbose=args.verbose, offline=args.offline)
     if args.verbose:
         print("------------------------\nSeqWare\n------------------------", file=sys.stderr)
-    sruns = seqware.get_sequencer_run(args.run)
+    if args.fpr:
+         sruns = seqware.get_sequencer_run(args.run, fpr=args.fpr)
+    else:
+        sruns = seqware.get_sequencer_run(args.run)
     sresult = seqware.decisions(sruns,expected_lanes=pinery.get_positions(pruns),verbose=args.verbose)
     if args.verbose:
         print("------------------------\n"+args.run+" FINAL \n------------------------", file=sys.stderr)
@@ -55,5 +63,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Searches for and reports the status of runs in Pinery and FPR")
     parser.add_argument("--run", "-r", help="the name of the sequencer run, e.g. 111130_h801_0064_AC043YACXX", required=True)
     parser.add_argument("--verbose","-v", help="Verbose logging",action="store_true")
+    parser.add_argument("--pineryjson","-j", help="Location of the Pinery sequencerrun JSON file for offline mode")
+    parser.add_argument("--offline","-o", help="Offline mode. Don't attempt to contact Pinery", action="store_true")
+    parser.add_argument("--fpr","-f", help="Alternative file provenance report, TSV format with header, zipped.")
     args=parser.parse_args()
     main(args)
