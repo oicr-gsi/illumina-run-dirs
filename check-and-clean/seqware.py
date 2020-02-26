@@ -7,7 +7,6 @@ import gzip
 import os
 oicrfpr="/.mounts/labs/seqprodbio/private/backups/seqware_files_report_latest.tsv.gz"
 #oicrfpr="/u/sbsuser/run_dir_cleanup/shesmu_check/fpr.tsv.gz"
-
 NO_CLEAN=1
 CLEAN=0
 CONTINUE=100

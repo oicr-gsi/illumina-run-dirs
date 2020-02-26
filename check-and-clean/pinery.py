@@ -120,11 +120,18 @@ def print_verbose(run):
     print("state:\t",run['state'], file=sys.stderr)
     print("date:\t",run['created_date'],"\n", file=sys.stderr)
 
+<<<<<<< Updated upstream
 def print_verbose_position(pos,offline=False):
     if pos['exsample_url'] == "Unknown" or offline:
         print("Lane:",pos['lane'],"\tNum Libraries:",pos['num_samples'],file=sys.stderr)
     else:
         print("Lane:",pos['lane'],"\tNum Libraries:",pos['num_samples'],"\tExample: ", get_pinery_obj(pos['exsample_url'])['name'], file=sys.stderr)
+=======
+def print_verbose_position(pos):
+    # pinery is slow right now so can't make calls back
+    #print("Lane:",pos['lane'],"\tNum Libraries:",pos['num_samples'],"\tExample: ", get_pinery_obj(pos['exsample_url'])['name'], file=sys.stderr)
+    print("Lane:",pos['lane'],"\tNum Libraries:",pos['num_samples'], file=sys.stderr)
+>>>>>>> Stashed changes
 
 def what_is_your_will(exists,inprogress,succeeded):
     if not exists:

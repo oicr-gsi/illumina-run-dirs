@@ -11,10 +11,10 @@ def main(args):
         print(time.strftime("%d/%m/%Y %H:%M:%S"),args.run, file=sys.stderr)
         print("------------------------\nPinery\n------------------------", file=sys.stderr)
     #pruns = pinery.get_sequencer_runs(args.run)
-    pruns = pinery.open_json("/u/sbsuser/run_dir_cleanup/sequencerruns.json")
+    pruns = pinery.open_json("/u/mtaschuk/run_dir_clean/sequencerruns.json",args.run)
     presult = pinery.decisions(pruns, verbose=args.verbose)
-
     if args.verbose:
+        print("------------------------\nPinery done\n------------------------", file=sys.stderr)  
         print("------------------------\nJIRA\n------------------------", file=sys.stderr)
     jruns = jira.get_sequencer_runs(args.run,args.username)
     jresult = jira.decisions(jruns,verbose=args.verbose)
