@@ -17,7 +17,7 @@ if [[ "$*" =~ "no-check" ]]; then
         printf "Not checking cwd name for run directory pattern...\n\n";
 
 elif [[ ! ( $THISDIR =~ [0-9]{6}_[A-Za-z0-9]{4,6}_[0-9A-Z]{5,6}_[0-9A-Z]{2,3}   ||
-        $THISPATH =~ [0-9]{6}_[A-Za-z0-9]{4,6}_[0-9]{4}_[0-9A-Z]{10}        ||
+        $THISPATH =~ [0-9]{6}_[A-Za-z0-9]{4,8}_[0-9]{4}_[0-9A-Z]{10}        ||
         $THISPATH =~ [0-9]{6}_SN[A-Za-z0-9]{4,7}_[0-9]{4}_[0-9A-Z]{10} ||
         $THISPATH =~ [0-9]{6}_SN[A-Za-z0-9]{4,7}_[0-9]{4}_[0-9A-Za-z]{10} ||
         $THISPATH =~ [0-9]{6}_M[A-Za-z0-9]{4,7}_[0-9]{4}_[A0]{8,10}-[0-9A-Za-z]{5}
