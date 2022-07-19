@@ -92,7 +92,7 @@ def decisions(fastqs,expected_lanes=8,verbose=False):
     lanes.sort()
     if len(lanes)!=expected_lanes:
         smallfile=True
-        problems.append(["There are only "+str(len(lanes))+" lanes"])
+        problems.append(["There are "+str(len(lanes))+" lanes and there should be "+str(expected_lanes)])
     if verbose:
         verbose_out=[]
         #verbose_out.append("\t".join(["Lane","Barcode","Library","Count","SW Size", "FS Size", "Path"]))

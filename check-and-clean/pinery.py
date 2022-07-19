@@ -6,7 +6,7 @@ import argparse
 import urllib2,ssl
 import re
 
-oicrurl="http://seqbio-pinery-prod-www.hpc.oicr.on.ca:8080/pinery-ws-miso/"
+oicrurl="http://pinery.gsi.oicr.on.ca"
 
 DELETE=-1
 CLEAN=0
@@ -102,7 +102,7 @@ def decisions(runs, verbose=False, offline=False):
                  pos['lane']=p['position']
                  if 'samples' in p:
                      pos['num_samples']=len(p['samples'])
-                     pos['exsample_url']=p['samples'][0]['url']
+                     pos['exsample_url']=p['samples'][0]['url'].replace("http://localhost:8080",oicrurl)
                  else:
                      pos['num_samples']="Unknown"
                      pos['exsample_url']="Unknown"

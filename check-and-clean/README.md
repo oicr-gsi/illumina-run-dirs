@@ -17,7 +17,7 @@ The two main scripts are checkRunBeforeClean.py and cleanRun. All other scripts 
 * For cleaning: bash on Debian
 * [Pinery webservice](http://seqware.github.io/docs/6-pipeline/#reporting)
 * JIRA (by default, points to jira.oicr.on.ca)
-  * JIRA configuration file: ~/.jira or set under JIRA_AUTH_FILE with private permissions. The file should consist of one line in the format username:password
+  * JIRA configuration file: ~/.jira or set under JIRA_AUTH_FILE with private permissions. The file should consist of one line that is your JIRA personal access token (https://jira.oicr.on.ca/secure/ViewProfile.jspa?selectedTab=com.atlassian.pats.pats-plugin:jira-user-personal-access-tokens)
 * SeqWare file provenance report (from [seqware files report](http://seqware.github.io/docs/6-pipeline/#reporting))
 
 Each service is contacted in its own python module: pinery.py, seqware.py, and jira.py. Each module has a method get_sequencer_run(s) that retrieves the data, and decisions which returns a 100 or 0 if the run checks out okay, or another number if an error occurred or the run can't be cleaned automatically.

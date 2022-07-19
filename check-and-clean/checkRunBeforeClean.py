@@ -4,23 +4,27 @@ from __future__ import print_function
 import pinery,seqware,jira
 import argparse
 
-
+pineryurl="http://pinery.gsi.oicr.on.ca"
+fpr="/.mounts/labs/seqprodbio/private/backups/seqware_files_report_latest.tsv.gz"
 def main(args):
     if args.verbose:
         import time
         print(time.strftime("%d/%m/%Y %H:%M:%S"),args.run, file=sys.stderr)
         print("------------------------\nPinery\n------------------------", file=sys.stderr)
+    # I put this in an array now because I was doing it in a very roundabout and terrible way before
+    # and I don't feel like fixing it right now -MT
+    pruns = [pinery.get_pinery_obj(pineryurl+"/sequencerrun?name="+args.run)]
     #pruns = pinery.get_sequencer_runs(args.run)
-    pruns = pinery.open_json("/u/mtaschuk/run_dir_clean/sequencerruns.json",args.run)
+    #pruns = pinery.open_json("/u/mtaschuk/run_dir_clean/sequencerruns.json",args.run)
     presult = pinery.decisions(pruns, verbose=args.verbose)
     if args.verbose:
         print("------------------------\nPinery done\n------------------------", file=sys.stderr)  
         print("------------------------\nJIRA\n------------------------", file=sys.stderr)
-    jruns = jira.get_sequencer_runs(args.run,args.username)
+    jruns = jira.get_sequencer_runs(args.run)
     jresult = jira.decisions(jruns,verbose=args.verbose)
     if args.verbose:
         print("------------------------\nSeqWare\n------------------------", file=sys.stderr)
-    sruns = seqware.get_sequencer_run(args.run)
+    sruns = seqware.get_sequencer_run(args.run,fpr=fpr)
     sresult = seqware.decisions(sruns,expected_lanes=pinery.get_positions(pruns),verbose=args.verbose)
     if args.verbose:
         print("------------------------\n"+args.run+" FINAL \n------------------------", file=sys.stderr)
@@ -68,6 +72,5 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Searches for and reports the status of issues in JIRA")
     parser.add_argument("--run", "-r", help="the name of the sequencer run, e.g. 111130_h801_0064_AC043YACXX", required=True)
     parser.add_argument("--verbose","-v", help="Verbose logging",action="store_true")
-    parser.add_argument("--username","-u", help="The username to use for JIRA",required=True)
     args=parser.parse_args()
     main(args)

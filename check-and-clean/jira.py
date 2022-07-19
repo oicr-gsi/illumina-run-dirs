@@ -19,38 +19,33 @@ def main(args):
         url=oicrurl
 
     if args.json is None:
-        tickets=get_sequencer_runs(args.run,args.username,url=url)
+        tickets=get_sequencer_runs(args.run,url=url)
     else: 
         tickets=json.load(args.json)
 
     return decisions(tickets,verbose=args.verbose)
 
 
-def get_jira_username_pass(username):
+def get_jira_personal_token():
     if "JIRA_AUTH" in os.environ:
         passfile=os.environ['JIRA_AUTH']
-        if re.match(username+":[.]*", passfile):
-          return passfile.strip()
     else:
         passfile=os.environ['HOME']+"/.jira"
-        if not os.path.exists(passfile):
-          raise IOError("JIRA auth file not found. Set JIRA_AUTH or ~/.jira")
-        if os.stat(passfile).st_mode & (stat.S_IRWXG | stat.S_IRWXO):
-          raise IOError("JIRA auth file should have permissions 700: "+passfile)
-        with open(passfile) as jfile:
-          for l in jfile:
-             if re.match(username+":[.]*", l):
-                return l.strip()
-        raise IOError("No matching username "+username+" in "+passfile)
+    if not os.path.exists(passfile):
+        raise IOError("JIRA auth file not found. Set JIRA_AUTH or ~/.jira")
+    if os.stat(passfile).st_mode & (stat.S_IRWXG | stat.S_IRWXO):
+        raise IOError("JIRA auth file should have permissions 700: "+passfile)
+    with open(passfile) as jfile:
+        for l in jfile:
+            return l.strip()
 
-def get_sequencer_runs(rname,username,url=oicrurl):
+def get_sequencer_runs(rname,url=oicrurl):
     """
-    Gets all of the tickets that talk about rname using creds from username
+    Gets all of the tickets that talk about rname using creds from personal token (see README)
     """
-    request_url=url+"/rest/api/2/search?jql=text~"+rname
+    request_url=url+"/rest/api/latest/search?jql=text~"+rname
     request = urllib2.Request(request_url)
-    base64string = base64.encodestring(get_jira_username_pass(username)).replace('\n', '')
-    request.add_header("Authorization", "Basic %s" % base64string)   
+    request.add_header("Authorization", "Bearer %s" % get_jira_personal_token())   
     request.add_header("Content-Type","application/json")
     try:
         result = urllib2.urlopen(request)
@@ -100,9 +95,5 @@ if __name__ == "__main__":
     parser.add_argument("--json", "-j", help="The sequencer run JSON file to search")
     parser.add_argument("--url", help="the JIRA URL. Default: https://jira.oicr.on.ca")
     parser.add_argument("--verbose","-v", help="Verbose logging",action="store_true")
-    parser.add_argument("--username","-u", help="The username to use for JIRA")
     args=parser.parse_args()
-    if args.json is None and args.username is None:
-        print("At least one of --json or --username must be supplied")
-        sys.exit(1)
     sys.exit(main(args))
