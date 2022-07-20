@@ -24,7 +24,7 @@ fi
 #   command2 is executed if and only if command1 returns a non-zero exit status.  The return status of AND and OR lists is the exit status of the last command executed in the list.
 
 set -x
-find . -type f -name '*.sequence.txt' -print0 | xargs -0 -I'{}' qsub -N zip$THISDIR -cwd -o sgeLog -e sgeLog -b y "gzip \"{}\"" 
+find . -type f -name '*.sequence.txt' -print0 | xargs -0 -I'{}' qsub -P gsi -N zip$THISDIR -cwd -o sgeLog -e sgeLog -b y "gzip \"{}\"" 
 rm *.o[0-9]*
 rm *.e[0-9]*
 rm *qval.txt.gz

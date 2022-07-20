@@ -16,7 +16,7 @@ def main(args):
         print("If running in offline mode, supply a Pinery JSON file.")
         exit(1)
     else:
-         pruns = pinery.get_sequencer_runs(args.run)
+        pruns = [pinery.get_pinery_obj(pineryurl+"/sequencerrun?name="+args.run)]
     presult = pinery.decisions(pruns, verbose=args.verbose, offline=args.offline)
     if args.verbose:
         print("------------------------\nSeqWare\n------------------------", file=sys.stderr)

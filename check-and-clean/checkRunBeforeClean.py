@@ -11,6 +11,11 @@ def main(args):
         import time
         print(time.strftime("%d/%m/%Y %H:%M:%S"),args.run, file=sys.stderr)
         print("------------------------\nPinery\n------------------------", file=sys.stderr)
+
+
+    if args.fpr is not None:
+        fpr=args.fpr
+        
     # I put this in an array now because I was doing it in a very roundabout and terrible way before
     # and I don't feel like fixing it right now -MT
     pruns = [pinery.get_pinery_obj(pineryurl+"/sequencerrun?name="+args.run)]
@@ -71,6 +76,7 @@ if __name__ == "__main__":
     import sys
     parser = argparse.ArgumentParser(description="Searches for and reports the status of issues in JIRA")
     parser.add_argument("--run", "-r", help="the name of the sequencer run, e.g. 111130_h801_0064_AC043YACXX", required=True)
+    parser.add_argument("--fpr", "-f", help="path to the file provenance report")
     parser.add_argument("--verbose","-v", help="Verbose logging",action="store_true")
     args=parser.parse_args()
     main(args)

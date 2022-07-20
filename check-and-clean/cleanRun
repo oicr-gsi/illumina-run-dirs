@@ -51,7 +51,7 @@ find . -type d -name 'Intensities' | xargs -I'{}' bash -c "cd {}; $SCRIPT_DIR/cl
 find . -type d -name 'Bustard*' | xargs -I'{}' bash -c "cd {}; $SCRIPT_DIR/cleanBustard"
 find . -type d -name '*Firecrest*' | xargs -I'{}' bash -c "cd {}; $SCRIPT_DIR/cleanFirecrest"
 find . -type d -name 'Data' | xargs -I'{}' bash -c "cd {}; $SCRIPT_DIR/cleanData"
-find . -type f ! \( -name 'cleanRun.txt' -o -name 'check*.txt' -o -name 'CLEANED.TIM' -o -name 'RunInfo.xml' -o -name 'runParameters.xml' -o -name 'RunParameters.xml' \) -a \( -name '*.txt' -o -name '*.log' -o -name '*.cfg' -o -name '*.xml' -o -name '*.csv' \) -print0 | xargs -0 -I'{}' qsub -N zip$THISDIR -cwd -o sgeLog -e sgeLog -b y "gzip \"{}\""  
+find . -type f ! \( -name 'cleanRun.txt' -o -name 'check*.txt' -o -name 'CLEANED.TIM' -o -name 'RunInfo.xml' -o -name 'runParameters.xml' -o -name 'RunParameters.xml' \) -a \( -name '*.txt' -o -name '*.log' -o -name '*.cfg' -o -name '*.xml' -o -name '*.csv' \) -print0 | xargs -0 -I'{}' qsub -P gsi -N zip$THISDIR -cwd -o sgeLog -e sgeLog -b y "gzip \"{}\""  
 # Could have a bit of a race here with launched gzipping jobs running while script below is calcing space used. No showstopper - just some error messages in log file
 sleep 60  # weak attempt to prevent error messages in script below
 $SCRIPT_DIR/cleaned

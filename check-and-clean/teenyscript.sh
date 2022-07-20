@@ -38,6 +38,6 @@ do
         --fpr ${FPR} \
         2> ${name}.checkRun \
         >> verdicts.tsv"
-#    qsub -cwd -b y -N "checkFP_${i}" "${CMD}"
+#    qsub -P gsi -cwd -b y -N "checkFP_${i}" "${CMD}"
     eval $CMD
 done

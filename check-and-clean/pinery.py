@@ -89,13 +89,10 @@ def decisions(runs, verbose=False, offline=False):
     #check if at least one matching run exists
     if runs:
         exists=True
-
-    patt_comp=re.compile("Completed")
-    patt_run=re.compile("Running")
     for r in runs:
         if verbose:
             print_verbose(r)
-        if patt_comp.match(r['state']):
+        if r['state'] == "Completed":
             succeeded=True
             for p in r['positions']:
                  pos={}
@@ -109,7 +106,7 @@ def decisions(runs, verbose=False, offline=False):
                  positions.append(pos)
                  if verbose:
                      print_verbose_position(pos,offline)
-        elif patt_run.match(r['state']):
+        elif r['state']=="Running":
             inprogress=True
     if verbose:
         print("Run exists: ", exists, "\nRun succeeded: ", succeeded, "\nRun in progress: ", inprogress, file=sys.stderr)
@@ -142,12 +139,16 @@ def what_is_your_will(exists,inprogress,succeeded):
 
 def get_positions(runs):
     positions=0
-    patt_comp=re.compile("Completed")
-    patt_run=re.compile("Running")
+    patt_nextseq=re.compile("\d{6}_NB\d*_.*")
     for r in runs:
-        if patt_comp.match(r['state']):
+        if r['state'] == "Completed":
             succeeded=True
             positions=len(r['positions'])
+        if "workflow_type" in r and r['workflow_type'] == "NovaSeqStandard":
+            positions=1
+        if patt_nextseq.match(r['name']):
+            positions=1
+        
     return positions
 
 if __name__ == "__main__":
