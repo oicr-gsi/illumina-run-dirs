@@ -30,7 +30,7 @@ def get_sequencer_run(rname,filetype="chemical/seq-na-fastq-gzip",wfilter="Xenom
                 - library
                 - details{}
                     - File SWID{}
-                          - sw_size	: the size according to seqware
+                          - sw_size	: the size according to fpr
                           - fs_size	: the size on the filesystem
                           - path	: the path of the file
     """
@@ -116,7 +116,7 @@ def decisions(fastqs,expected_lanes=8,verbose=False):
             for swid in swids:
                 sw=swids[swid]['sw_size']
                 fs=swids[swid]['fs_size']
-                #Test if the seqware and filesystem sizes match
+                #Test if the fpr and filesystem sizes match
                 if sw != fs:
                     mismatchfilesize=True
                     problems.append(details(lane,ius,library, "Filesize doesn't match -"+str(sw) + " vs "+str(fs)))
@@ -139,23 +139,23 @@ def decisions(fastqs,expected_lanes=8,verbose=False):
     
     if problems:
         import time
-        print(time.strftime("%d/%m/%Y %H:%M:%S"),"SeqWare issues detected",len(problems), file=sys.stderr)
+        print(time.strftime("%d/%m/%Y %H:%M:%S"),"FPR issues detected",len(problems), file=sys.stderr)
     for p in problems:
         print(p, file=sys.stderr)
     return what_is_your_will(morethantwo,lessthantwo,mismatchfilesize,smallfile)
 
 def what_is_your_will(morethantwo,lessthantwo,mismatchfilesize,smallfile):
    if smallfile:
-       print("SeqWare: Do not clean. Make JIRA ticket: diagnose small data problem", file=sys.stderr)
+       print("FPR: Do not clean. Make JIRA ticket: diagnose small data problem", file=sys.stderr)
        return NO_CLEAN
    if lessthantwo:
-       print("SeqWare: Do not clean. Make JIRA ticket: locate or regenerate data.", file=sys.stderr)
+       print("FPR: Do not clean. Make JIRA ticket: locate or regenerate data.", file=sys.stderr)
        return NO_CLEAN
    if morethantwo:
-       print("SeqWare: More than two fastqs. Clean. Make JIRA ticket.", file=sys.stderr)
+       print("FPR: More than two fastqs. Clean. Make JIRA ticket.", file=sys.stderr)
        return CONTINUE 
    if mismatchfilesize:
-#       print("SeqWare: Continue; possibly clean")
+#       print("FPR: Continue; possibly clean")
        return CONTINUE
    return CLEAN
 
@@ -182,9 +182,9 @@ def test_decisions_make_ius(fmap, tag, count, library, sw_size, fs_size, path):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Searches for and reports the status of fastqs in SeqWare according to sequencer run name")
+    parser = argparse.ArgumentParser(description="Searches for and reports the status of fastqs in FPR according to sequencer run name")
     parser.add_argument("--run", "-r", help="the name of the sequencer run, e.g. 111130_h801_0064_AC043YACXX", required=True)
-    parser.add_argument("--fpr", "-f", help="The SeqWare file provenance report to search")
+    parser.add_argument("--fpr", "-f", help="The FPR file provenance report to search")
     parser.add_argument("--verbose","-v", help="Verbose logging",action="store_true")
     args=parser.parse_args()
     sys.exit(main(args))

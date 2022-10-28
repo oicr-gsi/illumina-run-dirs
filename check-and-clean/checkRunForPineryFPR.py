@@ -1,7 +1,7 @@
 #!/usr/bin/python
 from __future__ import print_function
 
-import pinery,seqware
+import pinery,fpr
 import argparse
 
 
@@ -19,15 +19,15 @@ def main(args):
         pruns = [pinery.get_pinery_obj(pineryurl+"/sequencerrun?name="+args.run)]
     presult = pinery.decisions(pruns, verbose=args.verbose, offline=args.offline)
     if args.verbose:
-        print("------------------------\nSeqWare\n------------------------", file=sys.stderr)
+        print("------------------------\nFPR\n------------------------", file=sys.stderr)
     if args.fpr:
-         sruns = seqware.get_sequencer_run(args.run, fpr=args.fpr)
+         sruns = fpr.get_sequencer_run(args.run, fpr=args.fpr)
     else:
-        sruns = seqware.get_sequencer_run(args.run)
-    sresult = seqware.decisions(sruns,expected_lanes=pinery.get_positions(pruns),verbose=args.verbose)
+        sruns = fpr.get_sequencer_run(args.run)
+    sresult = fpr.decisions(sruns,expected_lanes=pinery.get_positions(pruns),verbose=args.verbose)
     if args.verbose:
         print("------------------------\n"+args.run+" FINAL \n------------------------", file=sys.stderr)
-        print("Pinery", str(presult), "\nSeqWare", str(sresult), file=sys.stderr)
+        print("Pinery", str(presult), "\nFPR", str(sresult), file=sys.stderr)
 
 
     result=[args.run]
@@ -47,12 +47,12 @@ def main(args):
         decision="No Clean"
         pveto=True
 
-    if sresult==seqware.NO_CLEAN:
-        result.append("SeqWare:No Clean")
+    if sresult==fpr.NO_CLEAN:
+        result.append("FPR:No Clean")
         if not pveto:
             decision="No Clean"
-    elif sresult==seqware.CONTINUE:
-        result.append("SeqWare: issues detected")
+    elif sresult==fpr.CONTINUE:
+        result.append("FPR: issues detected")
         decision="Clean"
     result.insert(1,decision)
     print("\t".join(result))

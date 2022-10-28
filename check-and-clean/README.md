@@ -15,12 +15,12 @@ The two main scripts are checkRunBeforeClean.py and cleanRun. All other scripts 
 * A clone of [illlumina-run-dirs](https://github.com/oicr-gsi/illumina-run-dirs)
 * For checking: Python 2.7 with module [argparse](https://docs.python.org/3/library/argparse.html)
 * For cleaning: bash on Debian
-* [Pinery webservice](http://seqware.github.io/docs/6-pipeline/#reporting)
+* Pinery webservice
 * JIRA (by default, points to jira.oicr.on.ca)
   * JIRA configuration file: ~/.jira or set under JIRA_AUTH_FILE with private permissions. The file should consist of one line that is your JIRA personal access token (https://jira.oicr.on.ca/secure/ViewProfile.jspa?selectedTab=com.atlassian.pats.pats-plugin:jira-user-personal-access-tokens)
-* SeqWare file provenance report (from [seqware files report](http://seqware.github.io/docs/6-pipeline/#reporting))
+* FPR file provenance report
 
-Each service is contacted in its own python module: pinery.py, seqware.py, and jira.py. Each module has a method get_sequencer_run(s) that retrieves the data, and decisions which returns a 100 or 0 if the run checks out okay, or another number if an error occurred or the run can't be cleaned automatically.
+Each service is contacted in its own python module: pinery.py, fpr.py, and jira.py. Each module has a method get_sequencer_run(s) that retrieves the data, and decisions which returns a 100 or 0 if the run checks out okay, or another number if an error occurred or the run can't be cleaned automatically.
 
 # Primary scripts
 
@@ -37,7 +37,7 @@ It uses the name of the sequencer run directory to query OICR services to determ
     * if the run appears in LIMS at all
   * JIRA
     * If there are any open tickets that mention the run by name
-  * SeqWare
+  * FPR
     * if there are exactly two fastqs per library
     * if there are at least two fastqs per lane
     * if the fastq files exist on disk and are larger than 1MB
@@ -86,12 +86,12 @@ Example:
 
 ```
 110915_h239_0128_BC055RACXX     Clean
-110927_h239_0130_AC0476ACXX     Clean   SeqWare: issues detected
+110927_h239_0130_AC0476ACXX     Clean   FPR: issues detected
 111107_h239_0131_AC087PACXX     Clean
 111118_h239_0132_AD080LACXX     Delete  Pinery: Not in lims; Delete, add to GP-596
 111118_h239_0133_AD080LACXX     Delete  Pinery: Not in lims; Delete, add to GP-596
-111124_h239_0134_BC06GFACXX     No Clean        SeqWare:No Clean
-111209_h239_0135_BD0GRMACXX     No Clean        JIRA: Open tickets      SeqWare:No Clean
+111124_h239_0134_BC06GFACXX     No Clean        FPR:No Clean
+111209_h239_0135_BD0GRMACXX     No Clean        JIRA: Open tickets      FPR:No Clean
 111216_h239_0136_AD0E6RACXX     Delete  Pinery: Not in lims; Delete, add to GP-596
 111222_h239_0137_AD0DDNACXX     Clean   Pinery: Failed run
 ```
@@ -364,21 +364,21 @@ Makes a decision whether or not the run can be cleaned
   * 1 : do not clean the run
 
 
-##seqware.py
+##fpr.py
 
-Searches for and reports the status of fastqs in SeqWare according to
+Searches for and reports the status of fastqs in FPR according to
 sequencer run name
 
 
 ```
-usage: seqware.py [-h] --run RUN [--fpr FPR] [--verbose]
-Searches for and reports the status of fastqs in SeqWare according to
+usage: fpr.py [-h] --run RUN [--fpr FPR] [--verbose]
+Searches for and reports the status of fastqs in FPR according to
 sequencer run name
 optional arguments:
   -h, --help         show this help message and exit
   --run RUN, -r RUN  the name of the sequencer run, e.g.
                      111130_h801_0064_AC043YACXX
-  --fpr FPR, -f FPR  The SeqWare file provenance report to search
+  --fpr FPR, -f FPR  The FPR file provenance report to search
   --verbose, -v      Verbose logging
 ```
 

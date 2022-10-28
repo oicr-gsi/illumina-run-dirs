@@ -1,12 +1,12 @@
 #!/usr/bin/python
 from __future__ import print_function
 
-import pinery,seqware,jira
+import pinery,fpr,jira
 import argparse
 
-pineryurl="http://pinery.gsi.oicr.on.ca"
-fpr="/.mounts/labs/seqprodbio/private/backups/seqware_files_report_latest.tsv.gz"
 def main(args):
+    pineryurl="http://pinery.gsi.oicr.on.ca"
+    anfpr="/.mounts/labs/seqprodbio/private/backups/seqware_files_report_latest.tsv.gz"
     if args.verbose:
         import time
         print(time.strftime("%d/%m/%Y %H:%M:%S"),args.run, file=sys.stderr)
@@ -14,8 +14,7 @@ def main(args):
 
 
     if args.fpr is not None:
-        fpr=args.fpr
-        
+        anfpr=args.fpr        
     # I put this in an array now because I was doing it in a very roundabout and terrible way before
     # and I don't feel like fixing it right now -MT
     pruns = [pinery.get_pinery_obj(pineryurl+"/sequencerrun?name="+args.run)]
@@ -28,12 +27,12 @@ def main(args):
     jruns = jira.get_sequencer_runs(args.run)
     jresult = jira.decisions(jruns,verbose=args.verbose)
     if args.verbose:
-        print("------------------------\nSeqWare\n------------------------", file=sys.stderr)
-    sruns = seqware.get_sequencer_run(args.run,fpr=fpr)
-    sresult = seqware.decisions(sruns,expected_lanes=pinery.get_positions(pruns),verbose=args.verbose)
+        print("------------------------\nFPR\n------------------------", file=sys.stderr)
+    sruns = fpr.get_sequencer_run(args.run,fpr=anfpr)
+    sresult = fpr.decisions(sruns,expected_lanes=pinery.get_positions(pruns),verbose=args.verbose)
     if args.verbose:
         print("------------------------\n"+args.run+" FINAL \n------------------------", file=sys.stderr)
-        print("Pinery", str(presult), "\nJIRA", str(jresult), "\nSeqWare", str(sresult), file=sys.stderr)
+        print("Pinery", str(presult), "\nJIRA", str(jresult), "\nFPR", str(sresult), file=sys.stderr)
 
 
     result=[args.run]
@@ -60,12 +59,12 @@ def main(args):
         if not pveto:
             decision="No Clean"
 
-    if sresult==seqware.NO_CLEAN:
-        result.append("SeqWare:No Clean")
+    if sresult==fpr.NO_CLEAN:
+        result.append("FPR:No Clean")
         if not pveto:
             decision="No Clean"
-    elif sresult==seqware.CONTINUE:
-        result.append("SeqWare: issues detected")
+    elif sresult==fpr.CONTINUE:
+        result.append("FPR: issues detected")
         if not pveto and not jveto:
             decision="Clean"
     result.insert(1,decision)
