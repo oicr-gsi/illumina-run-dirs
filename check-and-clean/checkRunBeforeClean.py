@@ -21,6 +21,7 @@ def main(args):
     #pruns = pinery.get_sequencer_runs(args.run)
     #pruns = pinery.open_json("/u/mtaschuk/run_dir_clean/sequencerruns.json",args.run)
     presult = pinery.decisions(pruns, verbose=args.verbose)
+    pskippedlanes=pinery.get_skipped_lanes(pruns)
     if args.verbose:
         print("------------------------\nPinery done\n------------------------", file=sys.stderr)  
         print("------------------------\nJIRA\n------------------------", file=sys.stderr)
@@ -28,9 +29,12 @@ def main(args):
     jresult = jira.decisions(jruns,verbose=args.verbose)
     if args.verbose:
         print("------------------------\nFPR\n------------------------", file=sys.stderr)
-    sruns = fpr.get_sequencer_run(args.run,fpr=anfpr)
+    sruns = fpr.get_sequencer_run(args.run,pskippedlanes,fpr=anfpr)
     sresult = fpr.decisions(sruns,expected_lanes=pinery.get_positions(pruns),verbose=args.verbose)
     if args.verbose:
+        for k,v in pskippedlanes.items():
+            if v==True:
+                print("Lane ",k," is skipped:",v)
         print("------------------------\n"+args.run+" FINAL \n------------------------", file=sys.stderr)
         print("Pinery", str(presult), "\nJIRA", str(jresult), "\nFPR", str(sresult), file=sys.stderr)
 
@@ -41,7 +45,7 @@ def main(args):
     jveto=False
 
     if presult==pinery.CLEAN:
-        result.append("Pinery: Failed run")
+        result.append("Pinery: Failed or skipped run")
         decision="Clean"
         pveto=True
     elif presult==pinery.DELETE:

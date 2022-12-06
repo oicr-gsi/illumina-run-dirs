@@ -18,7 +18,7 @@ def main(args):
         fastqs=get_sequencer_run(args.run)
     return decisions(fastqs, verbose=args.verbose)
 
-def get_sequencer_run(rname,filetype="chemical/seq-na-fastq-gzip",wfilter="Xenome",fpr=oicrfpr):
+def get_sequencer_run(rname,skipped_lanes,filetype="chemical/seq-na-fastq-gzip",wfilter="Xenome",fpr=oicrfpr):
     """
     Parse the file provenance report, search for sequencer runs called "rname", 
     locate files of a particular type "filetype", filtering out those from workflows named "wfilter".
@@ -51,7 +51,8 @@ def get_sequencer_run(rname,filetype="chemical/seq-na-fastq-gzip",wfilter="Xenom
                 continue
             if filter_matcher.search(line['Workflow Name']):
                 continue
-            
+            if line['Lane Number'] in skipped_lanes and skipped_lanes[line['Lane Number']] == True:
+                continue
             lane=lanes.setdefault(line['Lane Number'],{})
             barcode=lane.setdefault(line['IUS Tag'],{})
             numfiles=barcode.setdefault('count',0)
