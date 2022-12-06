@@ -14,6 +14,7 @@ NO_CLEAN=1
 CONTINUE=100
 
 def main(args):
+    url=oicrurl
     if args.url is not None:
         url=args.url
     if args.json is None and not args.offline:
@@ -85,6 +86,7 @@ def decisions(runs, verbose=False, offline=False):
     succeeded=False
     inprogress=False
     exists=False
+    skipped=[]
     positions=[]
     #check if at least one matching run exists
     if runs:
@@ -97,6 +99,8 @@ def decisions(runs, verbose=False, offline=False):
             for p in r['positions']:
                  pos={}
                  pos['lane']=p['position']
+                 pos['analysis_skipped']=p['analysis_skipped']
+                 skipped.append(p['analysis_skipped'])
                  if 'samples' in p:
                      pos['num_samples']=len(p['samples'])
                      pos['exsample_url']=p['samples'][0]['url'].replace("http://localhost:8080",oicrurl)
@@ -108,22 +112,14 @@ def decisions(runs, verbose=False, offline=False):
                      print_verbose_position(pos,offline)
         elif r['state']=="Running":
             inprogress=True
+    analysisSkip=False
+    if all(item is True for item in skipped):
+        analysisSkip=True
     if verbose:
-        print("Run exists: ", exists, "\nRun succeeded: ", succeeded, "\nRun in progress: ", inprogress, file=sys.stderr)
-    return(what_is_your_will(exists,inprogress,succeeded))
-
-def print_verbose(run):
-    print("name:\t",run['name'], file=sys.stderr)
-    print("state:\t",run['state'], file=sys.stderr)
-    print("date:\t",run['created_date'],"\n", file=sys.stderr)
-
-def print_verbose_position(pos,offline=False):
-    if pos['exsample_url'] == "Unknown" or offline:
-        print("Lane:",pos['lane'],"\tNum Libraries:",pos['num_samples'],file=sys.stderr)
-    else:
-        print("Lane:",pos['lane'],"\tNum Libraries:",pos['num_samples'],"\tExample: ", get_pinery_obj(pos['exsample_url'])['name'], file=sys.stderr)
-
-def what_is_your_will(exists,inprogress,succeeded):
+        print("Run exists: ", exists, "\nRun succeeded: ", succeeded, "\nRun in progress: ", inprogress,"\nRun analysis skipped:", analysisSkip, file=sys.stderr)
+    if analysisSkip:
+        print("Pinery: Run Analysis is skipped. Clean run",file=sys.stderr)
+        return CLEAN
     if not exists:
         print("Pinery: Delete folder; Add to JIRA ticket GP-596", file=sys.stderr)
         return DELETE
@@ -136,6 +132,18 @@ def what_is_your_will(exists,inprogress,succeeded):
     else:
         print("Pinery: Run failed. Clean run", file=sys.stderr)
         return CLEAN
+
+
+def print_verbose(run):
+    print("name:\t",run['name'], file=sys.stderr)
+    print("state:\t",run['state'], file=sys.stderr)
+    print("date:\t",run['created_date'],"\n", file=sys.stderr)
+
+def print_verbose_position(pos,offline=False):
+    if pos['exsample_url'] == "Unknown" or offline:
+        print("Lane:",pos['lane'],"\tNum Libraries:",pos['num_samples'],"\tAnalysis Skipped:",pos['analysis_skipped'],file=sys.stderr)
+    else:
+        print("Lane:",pos['lane'],"\tNum Libraries:",pos['num_samples'],"\tAnalysis Skipped:",pos['analysis_skipped'],"\tExample: ", get_pinery_obj(pos['exsample_url'])['name'], file=sys.stderr)
 
 def get_positions(runs):
     positions=0
