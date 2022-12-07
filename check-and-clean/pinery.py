@@ -86,7 +86,6 @@ def decisions(runs, verbose=False, offline=False):
     succeeded=False
     inprogress=False
     exists=False
-    skipped=[]
     positions=[]
     #check if at least one matching run exists
     if runs:
@@ -100,7 +99,6 @@ def decisions(runs, verbose=False, offline=False):
                  pos={}
                  pos['lane']=p['position']
                  pos['analysis_skipped']=p['analysis_skipped']
-                 skipped.append(p['analysis_skipped'])
                  if 'samples' in p:
                      pos['num_samples']=len(p['samples'])
                      pos['exsample_url']=p['samples'][0]['url'].replace("http://localhost:8080",oicrurl)
@@ -113,7 +111,7 @@ def decisions(runs, verbose=False, offline=False):
         elif r['state']=="Running":
             inprogress=True
     analysisSkip=False
-    if all(item is True for item in skipped):
+    if get_positions(runs) == 0:
         analysisSkip=True
     if verbose:
         print("Run exists: ", exists, "\nRun succeeded: ", succeeded, "\nRun in progress: ", inprogress,"\nRun analysis skipped:", analysisSkip, file=sys.stderr)
@@ -155,17 +153,22 @@ def get_skipped_lanes(runs):
 def get_positions(runs):
     positions=0
     patt_nextseq=re.compile("\d{6}_NB\d*_.*")
+    somethingSkipped=False
     for r in runs:
         if r['state'] == "Completed":
             succeeded=True
             for p in r['positions']:
                 if p['analysis_skipped']==False:
                     positions+=1
-        # if the run is skipped (0 lanes), don't set it back to 1; only if it's more than 1
-        if positions>1 and "workflow_type" in r and r['workflow_type'] == "NovaSeqStandard":
-            positions=1
-        if positions>1 and patt_nextseq.match(r['name']):
-            positions=1
+            if positions < len(r['positions']):
+                somethingSkipped=True
+        # catch standard Novaseq or Nextseq
+        # if the run is skipped, don't set it back to 1; set it to 0
+        if ("workflow_type" in r and r['workflow_type'] == "NovaSeqStandard") or patt_nextseq.match(r['name']):
+            if somethingSkipped:
+                positions=0
+            else:
+                positions=1
         
     return positions
 
