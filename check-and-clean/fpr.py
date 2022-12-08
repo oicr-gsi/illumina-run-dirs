@@ -70,8 +70,11 @@ def get_sequencer_run(rname,skipped_lanes,filetype="chemical/seq-na-fastq-gzip",
                 swid['sw_size']=0
             else:
                 swid['sw_size']=abs(long(line['File Size']))
-            if not deleted and os.path.exists(filepath):
-                swid['fs_size']=abs(long(os.path.getsize(filepath)))
+            if not deleted:
+                if os.path.exists(filepath):
+                    swid['fs_size']=abs(long(os.path.getsize(filepath)))
+                else:
+                    swid['fs_size']=None
             else:
                 swid['fs_size']=0
             swid['path']=filepath
@@ -99,6 +102,7 @@ def decisions(fastqs,expected_lanes=8,verbose=False):
     mismatchfilesize=False
     smallfile=False
     problems=[]
+    
     lanes=fastqs.keys()
     lanes.sort()
     if len(lanes)<expected_lanes:
@@ -109,6 +113,7 @@ def decisions(fastqs,expected_lanes=8,verbose=False):
         #verbose_out.append("\t".join(["Lane","Barcode","Library","Count","SW Size", "FS Size", "Path"]))
     #Iterate through each lane 
     for lane in lanes:
+        permissions_issues=False
         iuses=fastqs[lane].keys()
         iuses.sort()
         size=0
@@ -130,14 +135,17 @@ def decisions(fastqs,expected_lanes=8,verbose=False):
                 if skipped:
                     continue
                 #Test if the fpr and filesystem sizes match
-                if sw != fs:
-                    mismatchfilesize=True
-                    problems.append(details(lane,ius,library, "Filesize doesn't match -"+str(sw) + " vs "+str(fs)))
-                #Test if the size on disk is too small. Some viruses are very small, so this needs to be teenier. GP-3662
-                if fs<500:
-                    smallfile=True
-                    problems.append(details(lane,ius,library,"File very small = "+str(fs)+" bytes"))
-                size=size+fs
+                if fs != None:
+                    if sw != fs:
+                        mismatchfilesize=True
+                        problems.append(details(lane,ius,library, "Filesize doesn't match -"+str(sw) + " vs "+str(fs)))
+                    #Test if the size on disk is too small. Some viruses are very small, so this needs to be teenier. GP-3662
+                    if fs<500:
+                        smallfile=True
+                        problems.append(details(lane,ius,library,"File very small = "+str(fs)+" bytes"))
+                    size=size+fs
+                else:
+                    permissions_issues=True
             #Test if there are more than 2 files per IUS
             if count > 2:
                 morethantwo=True
@@ -149,6 +157,8 @@ def decisions(fastqs,expected_lanes=8,verbose=False):
 
         if verbose:
             print("Lane "+lane+" size:"+str(size/1e9)+"G", file=sys.stderr)
+            if permissions_issues:
+                print("Warning: some files in this lane could not be found on disk", file=sys.stderr)
 #        if size/1e9 < 2:
 #            smallfile=True
 #            problems.insert(0,"\t".join(["Lane",lane,"size is <15G:",str(size/1e9)]))
