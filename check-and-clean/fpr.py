@@ -18,7 +18,7 @@ def main(args):
         fastqs=get_sequencer_run(args.run)
     return decisions(fastqs, verbose=args.verbose)
 
-def get_sequencer_run(rname,skipped_lanes,filetype="chemical/seq-na-fastq-gzip",wfilter="Xenome",fpr=oicrfpr):
+def get_sequencer_run(rname,skipped_lanes,filetype="chemical/seq-na-fastq-gzip",wfilter="Xenome|sarsCoV2Analysis|ncov2019ArticNf",fpr=oicrfpr):
     """
     Parse the file provenance report, search for sequencer runs called "rname", 
     locate files of a particular type "filetype", filtering out those from workflows named "wfilter".
@@ -133,8 +133,8 @@ def decisions(fastqs,expected_lanes=8,verbose=False):
                 if sw != fs:
                     mismatchfilesize=True
                     problems.append(details(lane,ius,library, "Filesize doesn't match -"+str(sw) + " vs "+str(fs)))
-                #Test if the size on disk is too small (>1MB)
-                if fs<1e6:
+                #Test if the size on disk is too small. Some viruses are very small, so this needs to be teenier. GP-3662
+                if fs<500:
                     smallfile=True
                     problems.append(details(lane,ius,library,"File very small = "+str(fs)+" bytes"))
                 size=size+fs
