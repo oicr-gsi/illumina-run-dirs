@@ -60,7 +60,7 @@ def get_sequencer_runs(rname,url=oicrurl):
 def decisions(tickets, verbose=False):
     anyopen=False
     keys=[]
-    patt_comp=re.compile("Closed|Resolved|Won't Fix")
+    patt_comp=re.compile("Closed|Resolved|Won't Fix|Done|Fixed")
     for t in tickets['issues']:
         if verbose:
             print_verbose(t)
