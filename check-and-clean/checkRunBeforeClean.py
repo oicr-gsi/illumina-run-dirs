@@ -15,6 +15,11 @@ def main(args):
 
     if args.fpr is not None:
         anfpr=args.fpr        
+
+    result=[args.run]
+    decision="Clean"
+    pveto=False
+    
     # I put this in an array now because I was doing it in a very roundabout and terrible way before
     # and I don't feel like fixing it right now -MT
     pruns = [pinery.get_pinery_obj(pineryurl+"/sequencerrun?name="+args.run)]
@@ -24,25 +29,6 @@ def main(args):
     pskippedlanes=pinery.get_skipped_lanes(pruns)
     if args.verbose:
         print("------------------------\nPinery done\n------------------------", file=sys.stderr)  
-        print("------------------------\nJIRA\n------------------------", file=sys.stderr)
-    jruns = jira.get_sequencer_runs(args.run)
-    jresult = jira.decisions(jruns,verbose=args.verbose)
-    if args.verbose:
-        print("------------------------\nFPR\n------------------------", file=sys.stderr)
-    sruns = fpr.get_sequencer_run(args.run,pskippedlanes,fpr=anfpr)
-    sresult = fpr.decisions(sruns,expected_lanes=pinery.get_positions(pruns),verbose=args.verbose)
-    if args.verbose:
-        for k,v in pskippedlanes.items():
-            if v==True:
-                print("Lane ",k," is skipped:",v)
-        print("------------------------\n"+args.run+" FINAL \n------------------------", file=sys.stderr)
-        print("Pinery", str(presult), "\nJIRA", str(jresult), "\nFPR", str(sresult), file=sys.stderr)
-
-
-    result=[args.run]
-    decision="Clean"
-    pveto=False
-    jveto=False
 
     if presult==pinery.CLEAN:
         result.append("Pinery: Failed or skipped run")
@@ -57,20 +43,50 @@ def main(args):
         decision="No Clean"
         pveto=True
 
+    #Pinery overrules everything else. If it vetos continuing, no point in running expensive API queries
+    if pveto:
+        if args.verbose:
+            for k,v in pskippedlanes.items():
+                if v==True:
+                    print("Lane ",k," is skipped:",v)
+            print("------------------------\n"+args.run+" FINAL \n------------------------", file=sys.stderr)
+            print("Pinery", str(presult), "\nJIRA Not run\nFPR Not run", file=sys.stderr)
+        result.insert(1,decision)
+        print("\t".join(result))
+        return
+    
+    jveto=False
+
+    if args.verbose:
+        print("------------------------\nJIRA\n------------------------", file=sys.stderr)
+    jruns = jira.get_sequencer_runs(args.run)
+    jresult = jira.decisions(jruns,verbose=args.verbose)
+
     if jresult==jira.NO_CLEAN:
         result.append("JIRA: Open tickets")
         jveto=True
-        if not pveto:
-            decision="No Clean"
+        decision="No Clean"
 
+    if args.verbose:
+        print("------------------------\nFPR\n------------------------", file=sys.stderr)
+    sruns = fpr.get_sequencer_run(args.run,pskippedlanes,fpr=anfpr)
+    sresult = fpr.decisions(sruns,expected_lanes=pinery.get_positions(pruns),verbose=args.verbose)
     if sresult==fpr.NO_CLEAN:
         result.append("FPR:No Clean")
-        if not pveto:
-            decision="No Clean"
+        decision="No Clean"
     elif sresult==fpr.CONTINUE:
         result.append("FPR: issues detected")
-        if not pveto and not jveto:
+        if not jveto:
             decision="Clean"
+
+    if args.verbose:
+        for k,v in pskippedlanes.items():
+            if v==True:
+                print("Lane ",k," is skipped:",v)
+        print("------------------------\n"+args.run+" FINAL \n------------------------", file=sys.stderr)
+        print("Pinery", str(presult), "\nJIRA", str(jresult), "\nFPR", str(sresult), file=sys.stderr)
+
+
     result.insert(1,decision)
     print("\t".join(result))
 
