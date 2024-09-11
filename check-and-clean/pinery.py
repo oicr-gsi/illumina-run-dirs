@@ -19,7 +19,7 @@ def main(args):
         url=args.url
     if args.json is None and not args.offline:
         runs = get_sequencer_runs(args.run,url=url)
-    else: 
+    else:
         runs = open_json(args.json,args.run)
     return(decisions(runs,verbose=args.verbose,offline=args.offline))
 
@@ -64,7 +64,7 @@ def open_json(filename,rname):
     with open(filename) as rstr:
         runs=get_sequencer_run(rstr,rname)
     return runs
-       
+
 
 def get_pinery_obj(url):
     ctx = ssl.create_default_context()
@@ -100,7 +100,9 @@ def decisions(runs, verbose=False, offline=False):
                  pos['lane']=p['position']
                  pos['analysis_skipped']=p['analysis_skipped']
                  if 'samples' in p:
-                     pos['num_samples']=len(p['samples'])
+                     # exclude failed samples from the count
+                     pos['num_samples'] = len([x for x in p['samples'] if not (x['status']['state'] == "Failed" or x['data_review'] == "Failed")])
+
                      pos['exsample_url']=p['samples'][0]['url'].replace("http://localhost:8080",oicrurl)
                  else:
                      pos['num_samples']="Unknown"
@@ -169,11 +171,11 @@ def get_positions(runs):
                 positions=0
             else:
                 positions=1
-        
+
     return positions
 
 if __name__ == "__main__":
-    
+
     parser = argparse.ArgumentParser(description="Searches for and reports the status of sequencer runs in Pinery")
     parser.add_argument("--run", "-r", help="the name of the sequencer run, e.g. 111130_h801_0064_AC043YACXX", required=True)
     parser.add_argument("--json", "-j", help="The sequencer run JSON file to search")

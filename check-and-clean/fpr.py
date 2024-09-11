@@ -82,8 +82,8 @@ def get_sequencer_run(rname,skipped_lanes,filetype="chemical/seq-na-fastq-gzip",
     return lanes
 
 
-def print_verbose(lane, ius, count, library, swid):
-    return [lane, ius, library,str(count),str(swid['skipped']), str(swid['deleted']), str(swid['sw_size']), str(swid['fs_size']), swid['path'][:100]+"..."]
+def print_verbose(lane, ius, count, library, swid, info):
+    return [lane, ius, library,str(count),str(swid['skipped']), str(swid['deleted']), str(swid['sw_size']), str(swid['fs_size']), swid['path'][:100]+"...", info]
 
 def details(lane,ius,library,problem):
     return "\t".join([lane, ius, library, problem])
@@ -122,13 +122,23 @@ def decisions(fastqs,expected_lanes=8,verbose=False):
             library=fastqs[lane][ius]['library']
             swids=fastqs[lane][ius]['details']
             notdeleted=True
+
+            # With file provenance from Vidarr, skip status now only is calculated using Pinery provenance QC status.
+            # If all records for an IUS are skipped, we'll assume that we are working with a Vidarr file provenance report,
+            # and that we should treat this IUS as QC failed - and ignore this record.
+            if all([v['skipped'] for k,v in swids.items()]):
+                if verbose:
+                    for swid in swids:
+                        verbose_out.append(print_verbose(lane, ius,count,fastqs[lane][ius]['library'],swids[swid], "QC failed, excluding"))
+                continue
+
             for swid in swids:
                 sw=swids[swid]['sw_size']
                 fs=swids[swid]['fs_size']
                 deleted=swids[swid]['deleted']
                 skipped=swids[swid]['skipped']
                 if verbose:
-                    verbose_out.append(print_verbose(lane, ius,count,fastqs[lane][ius]['library'],swids[swid]))
+                    verbose_out.append(print_verbose(lane, ius,count,fastqs[lane][ius]['library'],swids[swid], ""))
                 if deleted:
                     notdeleted=False
                     continue    
@@ -163,7 +173,7 @@ def decisions(fastqs,expected_lanes=8,verbose=False):
 #            smallfile=True
 #            problems.insert(0,"\t".join(["Lane",lane,"size is <15G:",str(size/1e9)]))
     if verbose and len(verbose_out)>0:
-        pretty_print(["Lane","Barcode","Library","Count","Skipped","Deleted","SW Size", "FS Size", "Path"],verbose_out)
+        pretty_print(["Lane","Barcode","Library","Count","Skipped","Deleted","SW Size", "FS Size", "Path", "Info"],verbose_out)
     
     if problems:
         import time
