@@ -155,6 +155,7 @@ def decisions(fastqs,expected_lanes=8,verbose=False):
                         problems.append(details(lane,ius,library,"File very small = "+str(fs)+" bytes"))
                     size=size+fs
                 else:
+                    problems.append(details(lane,ius,library, "File does not exist: " + swids[swid]['path']))
                     permissions_issues=True
             #Test if there are more than 2 files per IUS
             if count > 2:
@@ -180,9 +181,9 @@ def decisions(fastqs,expected_lanes=8,verbose=False):
         print(time.strftime("%d/%m/%Y %H:%M:%S"),"FPR issues detected",len(problems), file=sys.stderr)
     for p in problems:
         print(p, file=sys.stderr)
-    return what_is_your_will(morethantwo,lessthantwo,mismatchfilesize,smallfile)
+    return what_is_your_will(morethantwo,lessthantwo,mismatchfilesize,smallfile,problems)
 
-def what_is_your_will(morethantwo,lessthantwo,mismatchfilesize,smallfile):
+def what_is_your_will(morethantwo,lessthantwo,mismatchfilesize,smallfile,problems):
    if smallfile:
        print("FPR: Do not clean. Make JIRA ticket: diagnose small data problem", file=sys.stderr)
        return NO_CLEAN
@@ -195,6 +196,9 @@ def what_is_your_will(morethantwo,lessthantwo,mismatchfilesize,smallfile):
    if mismatchfilesize:
 #       print("FPR: Continue; possibly clean")
        return CONTINUE
+   if problems:
+       # if there are problems and we have not handled them yet, let's bail out
+       return NO_CLEAN
    return CLEAN
 
 def test_decisions():
