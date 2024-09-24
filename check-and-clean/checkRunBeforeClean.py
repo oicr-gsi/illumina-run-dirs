@@ -82,7 +82,7 @@ def main(args):
     if args.verbose:
         for k,v in pskippedlanes.items():
             if v==True:
-                print("Lane ",k," is skipped:",v)
+                print("Lane ",k," is skipped:",v,file=sys.stderr)
         print("------------------------\n"+args.run+" FINAL \n------------------------", file=sys.stderr)
         print("Pinery", str(presult), "\nJIRA", str(jresult), "\nFPR", str(sresult), file=sys.stderr)
 
