@@ -59,11 +59,20 @@ def main(args):
 
     if args.verbose:
         print("------------------------\nJIRA\n------------------------", file=sys.stderr)
-    jruns = jira.get_sequencer_runs(args.run)
-    jresult = jira.decisions(jruns,verbose=args.verbose)
 
-    if jresult==jira.NO_CLEAN:
-        result.append("JIRA: Open tickets")
+    jruns_summary = jira.get_sequencer_runs_by_summary(args.run)
+    jresult_summary = jira.decisions(jruns_summary,verbose=args.verbose)
+
+    if jresult_summary==jira.NO_CLEAN:
+        result.append("JIRA: Open tickets (by summary)")
+        jveto=True
+        decision="No Clean"
+
+    jruns_text = jira.get_sequencer_runs_by_text(args.run)
+    jresult_text = jira.decisions(jruns_text,verbose=args.verbose)
+
+    if jresult_text==jira.NO_CLEAN:
+        result.append("JIRA: Open tickets (by text)")
         jveto=True
         decision="No Clean"
 
@@ -84,7 +93,7 @@ def main(args):
             if v==True:
                 print("Lane ",k," is skipped:",v,file=sys.stderr)
         print("------------------------\n"+args.run+" FINAL \n------------------------", file=sys.stderr)
-        print("Pinery", str(presult), "\nJIRA", str(jresult), "\nFPR", str(sresult), file=sys.stderr)
+        print("Pinery", str(presult), "\nJIRA summary", str(jresult_summary), "\nJIRA text", str(jresult_text), "\nFPR", str(sresult), file=sys.stderr)
 
 
     result.insert(1,decision)
