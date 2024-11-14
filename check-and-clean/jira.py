@@ -39,13 +39,30 @@ def get_jira_personal_token():
         for l in jfile:
             return l.strip()
 
-def get_sequencer_runs(rname,url=oicrurl):
+def get_sequencer_runs_by_text(rname,url=oicrurl):
     """
     Gets all of the tickets that talk about rname using creds from personal token (see README)
     """
     request_url=url+"/rest/api/latest/search?jql=text~"+rname
     request = urllib2.Request(request_url)
     request.add_header("Authorization", "Bearer %s" % get_jira_personal_token())   
+    request.add_header("Content-Type","application/json")
+    try:
+        result = urllib2.urlopen(request)
+        tickets=json.load(result)
+    except urllib2.HTTPError, e:
+        print("HTTP error: %d" % e.code, file=sys.stderr)
+    except urllib2.URLError, e:
+        print("Network error: %s" % e.reason.args[1], file=sys.stderr)
+    return tickets
+
+def get_sequencer_runs_by_summary(rname,url=oicrurl):
+    """
+    Gets all of the tickets that talk about rname using creds from personal token (see README)
+    """
+    request_url=url+"/rest/api/latest/search?jql=summary~"+rname
+    request = urllib2.Request(request_url)
+    request.add_header("Authorization", "Bearer %s" % get_jira_personal_token())
     request.add_header("Content-Type","application/json")
     try:
         result = urllib2.urlopen(request)
