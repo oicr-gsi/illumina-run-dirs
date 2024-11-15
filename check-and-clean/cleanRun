@@ -36,6 +36,7 @@ fi
 
 set -x
 mkdir -p ./sgeLog
+rm -rf Analysis
 rm -rf Images
 rm -rf ReadPrep1/Images
 rm -rf ReadPrep2/Images
