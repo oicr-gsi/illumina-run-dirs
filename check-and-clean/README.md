@@ -13,7 +13,7 @@ The two main scripts are checkRunBeforeClean.py and cleanRun. All other scripts 
 ## Dependencies
 
 * A clone of [illlumina-run-dirs](https://github.com/oicr-gsi/illumina-run-dirs)
-* For checking: Python 2.7 with module [argparse](https://docs.python.org/3/library/argparse.html)
+* For checking: Python 3 with module [argparse](https://docs.python.org/3/library/argparse.html)
 * For cleaning: bash on Debian
 * Pinery webservice
 * JIRA (by default, points to jira.oicr.on.ca)

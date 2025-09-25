@@ -1,5 +1,4 @@
 #!/usr/bin/python
-from __future__ import print_function
 import sys
 import re,csv
 import argparse
@@ -43,42 +42,42 @@ def get_sequencer_run(rname,skipped_lanes,filetype="chemical/seq-na-fastq-gzip",
         run_matcher=re.compile(rname.strip(), re.IGNORECASE)
         filter_matcher=re.compile(wfilter)
 
-	#parse the report into a map
-	for line in csv.DictReader(tsv, delimiter="\t"):
-            if not fastq_matcher.match(line['File Meta-Type']):
-                continue
-            if not run_matcher.match(line['Sequencer Run Name'].strip()):
-                continue
-            if filter_matcher.search(line['Workflow Name']):
-                continue
-            if line['Lane Number'] in skipped_lanes and skipped_lanes[line['Lane Number']] == True:
-                continue
-            lane=lanes.setdefault(line['Lane Number'],{})
-            barcode=lane.setdefault(line['IUS Tag'],{})
-            numfiles=barcode.setdefault('count',0)
-            barcode['library']=line['Sample Name']
-            details=barcode.setdefault('details',{})
-            swid=details.setdefault(line['File SWID'],{})
-            filepath=line['File Path']
-            if line['Skip'].strip()=="true":
-                swid['skipped']=True
+    #parse the report into a map
+    for line in csv.DictReader(tsv, delimiter="\t"):
+        if not fastq_matcher.match(line['File Meta-Type']):
+            continue
+        if not run_matcher.match(line['Sequencer Run Name'].strip()):
+            continue
+        if filter_matcher.search(line['Workflow Name']):
+            continue
+        if line['Lane Number'] in skipped_lanes and skipped_lanes[line['Lane Number']] == True:
+            continue
+        lane=lanes.setdefault(line['Lane Number'],{})
+        barcode=lane.setdefault(line['IUS Tag'],{})
+        numfiles=barcode.setdefault('count',0)
+        barcode['library']=line['Sample Name']
+        details=barcode.setdefault('details',{})
+        swid=details.setdefault(line['File SWID'],{})
+        filepath=line['File Path']
+        if line['Skip'].strip()=="true":
+            swid['skipped']=True
+        else:
+            swid['skipped']=False
+            barcode['count']=(numfiles+1)
+        deleted=True if "deleted" in line['File Attributes'] else False
+        if line['File Size'].strip()=="":
+            swid['sw_size']=0
+        else:
+            swid['sw_size']=abs(int(line['File Size']))
+        if not deleted:
+            if os.path.exists(filepath):
+                swid['fs_size']=abs(int(os.path.getsize(filepath)))
             else:
-                swid['skipped']=False
-                barcode['count']=(numfiles+1)
-            deleted=True if "deleted" in line['File Attributes'] else False
-            if line['File Size'].strip()=="":
-                swid['sw_size']=0
-            else:
-                swid['sw_size']=abs(long(line['File Size']))
-            if not deleted:
-                if os.path.exists(filepath):
-                    swid['fs_size']=abs(long(os.path.getsize(filepath)))
-                else:
-                    swid['fs_size']=None
-            else:
-                swid['fs_size']=0
-            swid['path']=filepath
-            swid['deleted']=deleted
+                swid['fs_size']=None
+        else:
+            swid['fs_size']=0
+        swid['path']=filepath
+        swid['deleted']=deleted
     return lanes
 
 
@@ -103,7 +102,7 @@ def decisions(fastqs,expected_lanes=8,verbose=False):
     smallfile=False
     problems=[]
     
-    lanes=fastqs.keys()
+    lanes=list(fastqs.keys())
     lanes.sort()
     if len(lanes)<expected_lanes:
         smallfile=True
@@ -114,7 +113,7 @@ def decisions(fastqs,expected_lanes=8,verbose=False):
     #Iterate through each lane 
     for lane in lanes:
         permissions_issues=False
-        iuses=fastqs[lane].keys()
+        iuses=list(fastqs[lane].keys())
         iuses.sort()
         size=0
         for ius in iuses:
@@ -126,7 +125,7 @@ def decisions(fastqs,expected_lanes=8,verbose=False):
             # With file provenance from Vidarr, skip status now only is calculated using Pinery provenance QC status.
             # If all records for an IUS are skipped, we'll assume that we are working with a Vidarr file provenance report,
             # and that we should treat this IUS as QC failed - and ignore this record.
-            if all([v['skipped'] for k,v in swids.items()]):
+            if all([v['skipped'] for k,v in list(swids.items())]):
                 if verbose:
                     for swid in swids:
                         verbose_out.append(print_verbose(lane, ius,count,fastqs[lane][ius]['library'],swids[swid], "QC failed, excluding"))

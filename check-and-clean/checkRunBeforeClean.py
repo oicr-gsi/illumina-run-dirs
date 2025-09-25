@@ -1,6 +1,4 @@
 #!/usr/bin/python
-from __future__ import print_function
-
 import pinery,fpr,jira
 import argparse
 
@@ -39,14 +37,14 @@ def main(args):
         decision="Delete"
         pveto=True
     elif presult==pinery.NO_CLEAN:
-        result.append("Pinery: In progress run")
+        result.append("Pinery: In progress run or signoffs not complete")
         decision="No Clean"
         pveto=True
 
     #Pinery overrules everything else. If it vetos continuing, no point in running expensive API queries
     if pveto:
         if args.verbose:
-            for k,v in pskippedlanes.items():
+            for k,v in list(pskippedlanes.items()):
                 if v==True:
                     print("Lane ",k," is skipped:",v)
             print("------------------------\n"+args.run+" FINAL \n------------------------", file=sys.stderr)
@@ -76,24 +74,25 @@ def main(args):
         jveto=True
         decision="No Clean"
 
-    if args.verbose:
-        print("------------------------\nFPR\n------------------------", file=sys.stderr)
-    sruns = fpr.get_sequencer_run(args.run,pskippedlanes,fpr=anfpr)
-    sresult = fpr.decisions(sruns,expected_lanes=pinery.get_positions(pruns),verbose=args.verbose)
-    if sresult==fpr.NO_CLEAN:
-        result.append("FPR:No Clean")
-        decision="No Clean"
-    elif sresult==fpr.CONTINUE:
-        result.append("FPR: issues detected")
-        if not jveto:
-            decision="Clean"
+    # if args.verbose:
+    #     print("------------------------\nFPR\n------------------------", file=sys.stderr)
+    # sruns = fpr.get_sequencer_run(args.run,pskippedlanes,fpr=anfpr)
+    # sresult = fpr.decisions(sruns,expected_lanes=pinery.get_positions(pruns),verbose=args.verbose)
+    # if sresult==fpr.NO_CLEAN:
+    #     result.append("FPR:No Clean")
+    #     decision="No Clean"
+    # elif sresult==fpr.CONTINUE:
+    #     result.append("FPR: issues detected")
+    #     if not jveto:
+    #         decision="Clean"
 
     if args.verbose:
-        for k,v in pskippedlanes.items():
+        for k,v in list(pskippedlanes.items()):
             if v==True:
                 print("Lane ",k," is skipped:",v,file=sys.stderr)
         print("------------------------\n"+args.run+" FINAL \n------------------------", file=sys.stderr)
-        print("Pinery", str(presult), "\nJIRA summary", str(jresult_summary), "\nJIRA text", str(jresult_text), "\nFPR", str(sresult), file=sys.stderr)
+        # print("Pinery", str(presult), "\nJIRA summary", str(jresult_summary), "\nJIRA text", str(jresult_text), "\nFPR", str(sresult), file=sys.stderr)
+        print("Pinery", str(presult), "\nJIRA summary", str(jresult_summary), "\nJIRA text", str(jresult_text), "\nFPR", str(""), file=sys.stderr)
 
 
     result.insert(1,decision)

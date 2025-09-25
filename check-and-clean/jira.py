@@ -1,11 +1,10 @@
 #!/usr/bin/python
-from __future__ import print_function
 import sys
 import json
 import argparse
-import urllib2,ssl,base64
 import re
 import os,stat
+import urllib.request, urllib.error, urllib.parse,ssl,base64
 
 oicrurl="https://jira.oicr.on.ca"
 CLEAN=0
@@ -44,15 +43,15 @@ def get_sequencer_runs_by_text(rname,url=oicrurl):
     Gets all of the tickets that talk about rname using creds from personal token (see README)
     """
     request_url=url+"/rest/api/latest/search?jql=text~"+rname
-    request = urllib2.Request(request_url)
+    request = urllib.request.Request(request_url)
     request.add_header("Authorization", "Bearer %s" % get_jira_personal_token())   
     request.add_header("Content-Type","application/json")
     try:
-        result = urllib2.urlopen(request)
+        result = urllib.request.urlopen(request)
         tickets=json.load(result)
-    except urllib2.HTTPError, e:
+    except urllib.error.HTTPError as e:
         print("HTTP error: %d" % e.code, file=sys.stderr)
-    except urllib2.URLError, e:
+    except urllib.error.URLError as e:
         print("Network error: %s" % e.reason.args[1], file=sys.stderr)
     return tickets
 
@@ -61,15 +60,15 @@ def get_sequencer_runs_by_summary(rname,url=oicrurl):
     Gets all of the tickets that talk about rname using creds from personal token (see README)
     """
     request_url=url+"/rest/api/latest/search?jql=summary~"+rname
-    request = urllib2.Request(request_url)
+    request = urllib.request.Request(request_url)
     request.add_header("Authorization", "Bearer %s" % get_jira_personal_token())
     request.add_header("Content-Type","application/json")
     try:
-        result = urllib2.urlopen(request)
+        result = urllib.request.urlopen(request)
         tickets=json.load(result)
-    except urllib2.HTTPError, e:
+    except urllib.error.HTTPError as e:
         print("HTTP error: %d" % e.code, file=sys.stderr)
-    except urllib2.URLError, e:
+    except urllib.error.URLError as e:
         print("Network error: %s" % e.reason.args[1], file=sys.stderr)
     return tickets
 
