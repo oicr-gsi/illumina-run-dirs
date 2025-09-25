@@ -4,15 +4,12 @@ import argparse
 
 def main(args):
     pineryurl="http://pinery.gsi.oicr.on.ca"
-    anfpr="/.mounts/labs/seqprodbio/private/backups/seqware_files_report_latest.tsv.gz"
+
     if args.verbose:
         import time
         print(time.strftime("%d/%m/%Y %H:%M:%S"),args.run, file=sys.stderr)
         print("------------------------\nPinery\n------------------------", file=sys.stderr)
 
-
-    if args.fpr is not None:
-        anfpr=args.fpr        
 
     result=[args.run]
     decision="Clean"
@@ -74,25 +71,29 @@ def main(args):
         jveto=True
         decision="No Clean"
 
-    # if args.verbose:
-    #     print("------------------------\nFPR\n------------------------", file=sys.stderr)
-    # sruns = fpr.get_sequencer_run(args.run,pskippedlanes,fpr=anfpr)
-    # sresult = fpr.decisions(sruns,expected_lanes=pinery.get_positions(pruns),verbose=args.verbose)
-    # if sresult==fpr.NO_CLEAN:
-    #     result.append("FPR:No Clean")
-    #     decision="No Clean"
-    # elif sresult==fpr.CONTINUE:
-    #     result.append("FPR: issues detected")
-    #     if not jveto:
-    #         decision="Clean"
+    sresult="Disabled"
+    # searching the FPR does not happen unless it is provided
+    if args.fpr is not None:
+        anfpr=args.fpr        
 
+        if args.verbose:
+            print("------------------------\nFPR\n------------------------", file=sys.stderr)
+        sruns = fpr.get_sequencer_run(args.run,pskippedlanes,fpr=anfpr)
+        sresult = fpr.decisions(sruns,expected_lanes=pinery.get_positions(pruns),verbose=args.verbose)
+        if sresult==fpr.NO_CLEAN:
+            result.append("FPR:No Clean")
+            decision="No Clean"
+        elif sresult==fpr.CONTINUE:
+            result.append("FPR: issues detected")
+            if not jveto:
+                decision="Clean"
     if args.verbose:
         for k,v in list(pskippedlanes.items()):
             if v==True:
                 print("Lane ",k," is skipped:",v,file=sys.stderr)
-        print("------------------------\n"+args.run+" FINAL \n------------------------", file=sys.stderr)
-        # print("Pinery", str(presult), "\nJIRA summary", str(jresult_summary), "\nJIRA text", str(jresult_text), "\nFPR", str(sresult), file=sys.stderr)
-        print("Pinery", str(presult), "\nJIRA summary", str(jresult_summary), "\nJIRA text", str(jresult_text), "\nFPR", str(""), file=sys.stderr)
+
+    print("------------------------\n"+args.run+" FINAL \n------------------------", file=sys.stderr)
+    print("Pinery", str(presult), "\nJIRA summary", str(jresult_summary), "\nJIRA text", str(jresult_text), "\nFPR", str(sresult), file=sys.stderr)
 
 
     result.insert(1,decision)
@@ -103,7 +104,7 @@ if __name__ == "__main__":
     import sys
     parser = argparse.ArgumentParser(description="Searches for and reports the status of issues in JIRA")
     parser.add_argument("--run", "-r", help="the name of the sequencer run, e.g. 111130_h801_0064_AC043YACXX", required=True)
-    parser.add_argument("--fpr", "-f", help="path to the file provenance report")
+    parser.add_argument("--fpr", "-f", help="enable searching the FPR by providing path to the file provenance report. Increases time substantially.")
     parser.add_argument("--verbose","-v", help="Verbose logging",action="store_true")
     args=parser.parse_args()
     main(args)
