@@ -59,7 +59,7 @@ If you must run using an insecure account, set the JIRA\_AUTH environment variab
 ```
 usage: checkRunBeforeClean.py [-h] --run RUN [--fpr FPR] [--verbose]
 
-Searches for and reports the status of issues in JIRA
+Checks a sequencer run to see if it can be cleaned
 
 options:
   -h, --help         show this help message and exit

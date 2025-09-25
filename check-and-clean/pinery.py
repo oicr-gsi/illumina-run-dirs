@@ -10,6 +10,7 @@ oicrurl="http://pinery.gsi.oicr.on.ca"
 DELETE=-1
 CLEAN=0
 NO_CLEAN=1
+NO_QCS=2
 CONTINUE=100
 
 def main(args):
@@ -130,7 +131,7 @@ def decisions(runs, verbose=False, offline=False):
         return DELETE
     if pending:
         print("Pinery: Run-Library signoffs not complete", file=sys.stderr)
-        return NO_CLEAN
+        return NO_QCS
     if inprogress:
         print("Pinery: Stop; do not clean", file=sys.stderr)
         return NO_CLEAN

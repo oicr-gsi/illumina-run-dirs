@@ -34,7 +34,11 @@ def main(args):
         decision="Delete"
         pveto=True
     elif presult==pinery.NO_CLEAN:
-        result.append("Pinery: In progress run or signoffs not complete")
+        result.append("Pinery: In progress run")
+        decision="No Clean"
+        pveto=True
+    elif presult==pinery.NO_QCS and args.fpr is None:
+        result.append("Pinery: Signoffs not complete")
         decision="No Clean"
         pveto=True
 
@@ -102,9 +106,9 @@ def main(args):
 
 if __name__ == "__main__":
     import sys
-    parser = argparse.ArgumentParser(description="Searches for and reports the status of issues in JIRA")
+    parser = argparse.ArgumentParser(description="Checks a sequencer run to see if it can be cleaned")
     parser.add_argument("--run", "-r", help="the name of the sequencer run, e.g. 111130_h801_0064_AC043YACXX", required=True)
-    parser.add_argument("--fpr", "-f", help="enable searching the FPR by providing path to the file provenance report. Increases time substantially.")
+    parser.add_argument("--fpr", "-f", help="enable searching the FPR by providing path to the file provenance report. Increases time substantially and toggles off QC checking.")
     parser.add_argument("--verbose","-v", help="Verbose logging",action="store_true")
     args=parser.parse_args()
     main(args)
