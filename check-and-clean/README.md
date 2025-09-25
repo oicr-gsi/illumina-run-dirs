@@ -14,7 +14,7 @@ The two main scripts are checkRunBeforeClean.py and cleanRun. All other scripts 
 
 * A clone of [illlumina-run-dirs](https://github.com/oicr-gsi/illumina-run-dirs)
 * For checking: Python 3 with module [argparse](https://docs.python.org/3/library/argparse.html)
-* For cleaning: bash on Debian
+* For cleaning: bash on Debian/Ubuntu
 * Pinery webservice
 * JIRA (by default, points to jira.oicr.on.ca)
   * JIRA configuration file: ~/.jira or set under JIRA_AUTH_FILE with private permissions. The file should consist of one line that is your JIRA personal access token (https://jira.oicr.on.ca/secure/ViewProfile.jspa?selectedTab=com.atlassian.pats.pats-plugin:jira-user-personal-access-tokens)
@@ -32,12 +32,13 @@ It uses the name of the sequencer run directory to query OICR services to determ
 
 * Checks
   * whether sequencing is complete;
-  * LIMS
+  * LIMS (Pinery)
     * if this run is marked 'failed'
     * if the run appears in LIMS at all
+    * if the run has had all QC signed off (for the run and run-libraries)
   * JIRA
     * If there are any open tickets that mention the run by name
-  * FPR
+  * Optionally: FPR
     * if there are exactly two fastqs per library
     * if there are at least two fastqs per lane
     * if the fastq files exist on disk and are larger than 1MB
@@ -51,26 +52,26 @@ Because of the requirement to authenticate in JIRA, this script should be run as
 
 If you must run using an insecure account, set the JIRA\_AUTH environment variable (and make sure that bash history immediately forgets about it).
 
-    history -d $((HISTCMD-1)) && export JIRA_AUTH='mtaschuk:************'
+    history -d $((HISTCMD-1)) && export JIRA_AUTH='YOUR_GITHUB_PERSONAL_ACCESS_TOKEN'
 
 
 
 ```
-usage: checkRunBeforeClean.py [-h] --run RUN [--verbose] --username USERNAME
+usage: checkRunBeforeClean.py [-h] --run RUN [--fpr FPR] [--verbose]
+
 Searches for and reports the status of issues in JIRA
-optional arguments:
-  -h, --help            show this help message and exit
-  --run RUN, -r RUN     the name of the sequencer run, e.g.
-                        111130_h801_0064_AC043YACXX
-  --verbose, -v         Verbose logging
-  --username USERNAME, -u USERNAME
-                        The username to use for JIRA
+
+options:
+  -h, --help         show this help message and exit
+  --run RUN, -r RUN  the name of the sequencer run, e.g. 111130_h801_0064_AC043YACXX
+  --fpr FPR, -f FPR  enable searching the FPR by providing path to the file provenance report. Increases time substantially.
+  --verbose, -v      Verbose logging
 ```
 
-Example command lines:
+Example command line:
 
 ```
-python checkRunBeforeClean.py --run 180320_A00469_0007_AHCHTWDMXX --username mtaschuk
+python3 checkRunBeforeClean.py --run 180320_A00469_0007_AHCHTWDMXX
 ```
 
 
