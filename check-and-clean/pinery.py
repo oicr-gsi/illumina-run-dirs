@@ -86,7 +86,7 @@ def decisions(runs, verbose=False, offline=False):
     succeeded=False
     inprogress=False
     exists=False
-    pending=True
+    pending=False
     positions=[]
     #check if at least one matching run exists
     if runs:
@@ -94,7 +94,7 @@ def decisions(runs, verbose=False, offline=False):
     for r in runs:
         if verbose:
             print_verbose(r)
-        if r['state'] == "Completed" and r['data_review']=="Passed":
+        if r['state'] == "Completed":
             succeeded=True
             for p in r['positions']:
                  pos={}
@@ -106,8 +106,8 @@ def decisions(runs, verbose=False, offline=False):
                     pos['exsample_url']=p['samples'][0]['url'].replace("http://localhost:8080",oicrurl)
                     pos['num_pending'] = len([x for x in p['samples'] if (x['data_review'] == "Pending")])
                     pos['num_notready'] = len([x for x in p['samples'] if (x['status']['name'] == "Not Ready")])
-                    if pos['num_notready'] == 0:
-                        pending=False
+                    if pos['num_notready'] > 0:
+                        pending=True
                  else:
                      pos['num_samples']="Unknown"
                      pos['exsample_url']="Unknown"
@@ -118,6 +118,8 @@ def decisions(runs, verbose=False, offline=False):
                      print_verbose_position(pos,offline)
         elif r['state']=="Running":
             inprogress=True
+        if r['data_review']=="Pending":
+            pending=True
     analysisSkip=False
     if get_positions(runs) == 0:
         analysisSkip=True
@@ -130,7 +132,7 @@ def decisions(runs, verbose=False, offline=False):
         print("Pinery: Delete folder; Add to JIRA ticket GP-596", file=sys.stderr)
         return DELETE
     if pending:
-        print("Pinery: Run-Library signoffs not complete", file=sys.stderr)
+        print("Pinery: Run or Run-Library signoffs not complete", file=sys.stderr)
         return NO_QCS
     if inprogress:
         print("Pinery: Stop; do not clean", file=sys.stderr)
