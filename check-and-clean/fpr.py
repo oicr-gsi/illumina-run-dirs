@@ -36,7 +36,7 @@ def get_sequencer_run(rname,skipped_lanes,filetype="chemical/seq-na-fastq-gzip",
                           - deleted : whether the file is annotated as deleted
     """
     lanes={}
-    with gzip.open(fpr) as tsv:
+    with gzip.open(fpr, 'rt') as tsv:
         #match fastqs from specific runs that are not from Xenome
         fastq_matcher=re.compile(filetype)
         run_matcher=re.compile(rname.strip(), re.IGNORECASE)
