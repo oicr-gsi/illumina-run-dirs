@@ -40,7 +40,6 @@ def main(args):
     elif presult==pinery.NO_QCS and args.fpr is None:
         result.append("Pinery: Signoffs not complete")
         decision="No Clean"
-        pveto=True
 
     #Pinery overrules everything else. If it vetos continuing, no point in running expensive API queries
     if pveto:
