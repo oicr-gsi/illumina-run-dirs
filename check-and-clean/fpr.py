@@ -42,42 +42,42 @@ def get_sequencer_run(rname,skipped_lanes,filetype="chemical/seq-na-fastq-gzip",
         run_matcher=re.compile(rname.strip(), re.IGNORECASE)
         filter_matcher=re.compile(wfilter)
 
-    #parse the report into a map
-    for line in csv.DictReader(tsv, delimiter="\t"):
-        if not fastq_matcher.match(line['File Meta-Type']):
-            continue
-        if not run_matcher.match(line['Sequencer Run Name'].strip()):
-            continue
-        if filter_matcher.search(line['Workflow Name']):
-            continue
-        if line['Lane Number'] in skipped_lanes and skipped_lanes[line['Lane Number']] == True:
-            continue
-        lane=lanes.setdefault(line['Lane Number'],{})
-        barcode=lane.setdefault(line['IUS Tag'],{})
-        numfiles=barcode.setdefault('count',0)
-        barcode['library']=line['Sample Name']
-        details=barcode.setdefault('details',{})
-        swid=details.setdefault(line['File SWID'],{})
-        filepath=line['File Path']
-        if line['Skip'].strip()=="true":
-            swid['skipped']=True
-        else:
-            swid['skipped']=False
-            barcode['count']=(numfiles+1)
-        deleted=True if "deleted" in line['File Attributes'] else False
-        if line['File Size'].strip()=="":
-            swid['sw_size']=0
-        else:
-            swid['sw_size']=abs(int(line['File Size']))
-        if not deleted:
-            if os.path.exists(filepath):
-                swid['fs_size']=abs(int(os.path.getsize(filepath)))
+        #parse the report into a map
+        for line in csv.DictReader(tsv, delimiter="\t"):
+            if not fastq_matcher.match(line['File Meta-Type']):
+                continue
+            if not run_matcher.match(line['Sequencer Run Name'].strip()):
+                continue
+            if filter_matcher.search(line['Workflow Name']):
+                continue
+            if line['Lane Number'] in skipped_lanes and skipped_lanes[line['Lane Number']] == True:
+                continue
+            lane=lanes.setdefault(line['Lane Number'],{})
+            barcode=lane.setdefault(line['IUS Tag'],{})
+            numfiles=barcode.setdefault('count',0)
+            barcode['library']=line['Sample Name']
+            details=barcode.setdefault('details',{})
+            swid=details.setdefault(line['File SWID'],{})
+            filepath=line['File Path']
+            if line['Skip'].strip()=="true":
+                swid['skipped']=True
             else:
-                swid['fs_size']=None
-        else:
-            swid['fs_size']=0
-        swid['path']=filepath
-        swid['deleted']=deleted
+                swid['skipped']=False
+                barcode['count']=(numfiles+1)
+            deleted=True if "deleted" in line['File Attributes'] else False
+            if line['File Size'].strip()=="":
+                swid['sw_size']=0
+            else:
+                swid['sw_size']=abs(int(line['File Size']))
+            if not deleted:
+                if os.path.exists(filepath):
+                    swid['fs_size']=abs(int(os.path.getsize(filepath)))
+                else:
+                    swid['fs_size']=None
+            else:
+                swid['fs_size']=0
+            swid['path']=filepath
+            swid['deleted']=deleted
     return lanes
 
 
