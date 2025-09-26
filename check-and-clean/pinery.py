@@ -106,7 +106,7 @@ def decisions(runs, verbose=False, offline=False):
                     pos['exsample_url']=p['samples'][0]['url'].replace("http://localhost:8080",oicrurl)
                     pos['num_pending'] = len([x for x in p['samples'] if (x['data_review'] == "Pending")])
                     pos['num_notready'] = len([x for x in p['samples'] if (x['status']['name'] == "Not Ready")])
-                    if pos['num_pending'] == 0 and pos['num_notready'] == 0:
+                    if pos['num_notready'] == 0:
                         pending=False
                  else:
                      pos['num_samples']="Unknown"
