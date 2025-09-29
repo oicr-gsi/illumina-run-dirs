@@ -59,18 +59,14 @@ def main(args):
         print("------------------------\nJIRA\n------------------------", file=sys.stderr)
 
     jruns_summary = jira.get_sequencer_runs_by_summary(args.run)
-    jresult_summary = jira.decisions(jruns_summary,verbose=args.verbose)
+    jruns_text = jira.get_sequencer_runs_by_text(args.run)
+    jruns = jruns_summary.copy()
+    jruns.update(jruns_text)
+
+    jresult_summary = jira.decisions(jruns,verbose=args.verbose)
 
     if jresult_summary==jira.NO_CLEAN:
-        result.append("JIRA: Open tickets (by summary)")
-        jveto=True
-        decision="No Clean"
-
-    jruns_text = jira.get_sequencer_runs_by_text(args.run)
-    jresult_text = jira.decisions(jruns_text,verbose=args.verbose)
-
-    if jresult_text==jira.NO_CLEAN:
-        result.append("JIRA: Open tickets (by text)")
+        result.append("JIRA: Open tickets (by summary and text)")
         jveto=True
         decision="No Clean"
 
