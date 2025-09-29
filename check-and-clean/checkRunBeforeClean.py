@@ -15,11 +15,8 @@ def main(args):
     decision="Clean"
     pveto=False
     
-    # I put this in an array now because I was doing it in a very roundabout and terrible way before
-    # and I don't feel like fixing it right now -MT
-    pruns = [pinery.get_pinery_obj(pineryurl+"/sequencerrun?name="+args.run)]
-    #pruns = pinery.get_sequencer_runs(args.run)
-    #pruns = pinery.open_json("/u/mtaschuk/run_dir_clean/sequencerruns.json",args.run)
+    pruns = pinery.get_pinery_obj(pineryurl+"/sequencerrun?name="+args.run)
+    
     presult = pinery.decisions(pruns, verbose=args.verbose)
     pskippedlanes=pinery.get_skipped_lanes(pruns)
     if args.verbose:

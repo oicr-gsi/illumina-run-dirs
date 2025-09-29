@@ -82,46 +82,48 @@ def get_pinery_obj(url):
     return sample
 
 
-def decisions(runs, verbose=False, offline=False):
+def decisions(r, verbose=False, offline=False):
     succeeded=False
     inprogress=False
     exists=False
     pending=False
     positions=[]
     #check if at least one matching run exists
-    if runs:
+    if r:
         exists=True
-    for r in runs:
-        if verbose:
-            print_verbose(r)
-        if r['state'] == "Completed" and r['status']['state']!="Failed":
-            succeeded=True
-            for p in r['positions']:
-                 pos={}
-                 pos['lane']=p['position']
-                 pos['analysis_skipped']=p['analysis_skipped']
-                 if 'samples' in p:
-                    # exclude failed samples from the count
-                    pos['num_samples'] = len([x for x in p['samples'] if not (x['status']['state'] == "Failed" or x['data_review'] == "Failed")])
-                    pos['exsample_url']=p['samples'][0]['url'].replace("http://localhost:8080",oicrurl)
-                    pos['num_pending'] = len([x for x in p['samples'] if (x['data_review'] == "Pending")])
-                    pos['num_notready'] = len([x for x in p['samples'] if (x['status']['name'] == "Not Ready")])
-                    if pos['num_notready'] > 0:
-                        pending=True
-                 else:
-                     pos['num_samples']="Unknown"
-                     pos['exsample_url']="Unknown"
-                     pos['num_pending'] = "Unknown"
-                     pos['num_notready'] = "Unknown"
-                 positions.append(pos)
-                 if verbose:
-                     print_verbose_position(pos,offline)
-        elif r['state']=="Running":
-            inprogress=True
-        if r['data_review']=="Pending":
-            pending=True
+    if verbose:
+        print_verbose(r)
+    if r['state'] == "Completed":
+        succeeded=True
+        for p in r['positions']:
+             pos={}
+             pos['lane']=p['position']
+             pos['analysis_skipped']=p['analysis_skipped']
+             if 'samples' in p:
+                # exclude failed samples from the count
+                pos['num_samples'] = len([x for x in p['samples'] if not (x['status']['state'] == "Failed" or x['data_review'] == "Failed")])
+                pos['exsample_url']=p['samples'][0]['url'].replace("http://localhost:8080",oicrurl)
+                pos['num_pending'] = len([x for x in p['samples'] if (x['data_review'] == "Pending")])
+                pos['num_notready'] = len([x for x in p['samples'] if (x['status']['name'] == "Not Ready")])
+                if pos['num_notready'] > 0:
+                    pending=True
+             else:
+                 pos['num_samples']="Unknown"
+                 pos['exsample_url']="Unknown"
+                 pos['num_pending'] = "Unknown"
+                 pos['num_notready'] = "Unknown"
+             positions.append(pos)
+             if verbose:
+                 print_verbose_position(pos,offline)
+    elif r['state']=="Running":
+        inprogress=True
+
+    if r['data_review']=="Pending":
+        pending=True
     analysisSkip=False
-    if get_positions(runs) == 0:
+    if get_positions(r) == 0:
+        analysisSkip=True
+    if r['status']['state']=="Failed":
         analysisSkip=True
     if verbose:
         print("Run exists: ", exists, "\nRun succeeded: ", succeeded, "\nRun in progress: ", inprogress,"\nRun analysis skipped:", analysisSkip, file=sys.stderr)
@@ -156,32 +158,30 @@ def print_verbose_position(pos,offline=False):
     else:
         print("Lane:",pos['lane'],"\tNum Libraries:",pos['num_samples'],"\tAnalysis Skipped:",pos['analysis_skipped'],"\tPending QC:",pos['num_notready'],"\tExample: ", get_pinery_obj(pos['exsample_url'])['name'], file=sys.stderr)
 
-def get_skipped_lanes(runs):
+def get_skipped_lanes(r):
     lanes={}
-    for r in runs:
-        for p in r['positions']:
-            lanes[p['position']]=p['analysis_skipped']
+    for p in r['positions']:
+        lanes[p['position']]=p['analysis_skipped']
     return lanes
 
-def get_positions(runs):
+def get_positions(r):
     positions=0
     patt_nextseq=re.compile("\d{6}_NB\d*_.*")
     somethingSkipped=False
-    for r in runs:
-        if r['state'] == "Completed":
-            succeeded=True
-            for p in r['positions']:
-                if p['analysis_skipped']==False:
-                    positions+=1
-            if positions < len(r['positions']):
-                somethingSkipped=True
-        # catch standard Novaseq or Nextseq
-        # if the run is skipped, don't set it back to 1; set it to 0
-        if ("workflow_type" in r and r['workflow_type'] == "NovaSeqStandard") or patt_nextseq.match(r['name']):
-            if somethingSkipped:
-                positions=0
-            else:
-                positions=1
+    if r['state'] == "Completed":
+        succeeded=True
+        for p in r['positions']:
+            if p['analysis_skipped']==False:
+                positions+=1
+        if positions < len(r['positions']):
+            somethingSkipped=True
+    # catch standard Novaseq or Nextseq
+    # if the run is skipped, don't set it back to 1; set it to 0
+    if ("workflow_type" in r and r['workflow_type'] == "NovaSeqStandard") or patt_nextseq.match(r['name']):
+        if somethingSkipped:
+            positions=0
+        else:
+            positions=1
 
     return positions
 
