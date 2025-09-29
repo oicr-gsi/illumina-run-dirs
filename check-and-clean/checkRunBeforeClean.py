@@ -92,7 +92,7 @@ def main(args):
                 print("Lane ",k," is skipped:",v,file=sys.stderr)
 
     print("------------------------\n"+args.run+" FINAL \n------------------------", file=sys.stderr)
-    print("Pinery", str(presult), "\nJIRA summary", str(jresult_summary), "\nJIRA text", str(jresult_text), "\nFPR", str(sresult), file=sys.stderr)
+    print("Pinery", str(presult), "\nJIRA summary", str(jresult_summary), "\nFPR", str(sresult), file=sys.stderr)
 
 
     result.insert(1,decision)
