@@ -94,7 +94,7 @@ def decisions(runs, verbose=False, offline=False):
     for r in runs:
         if verbose:
             print_verbose(r)
-        if r['state'] == "Completed":
+        if r['state'] == "Completed" and r['status']['state']!="Failed":
             succeeded=True
             for p in r['positions']:
                  pos={}
