@@ -126,7 +126,7 @@ def decisions(r, verbose=False, offline=False):
     if r['status']['state']=="Failed":
         analysisSkip=True
     if verbose:
-        print("Run exists: ", exists, "\nRun succeeded: ", succeeded, "\nRun in progress: ", inprogress,"\nRun analysis skipped:", analysisSkip, file=sys.stderr)
+        print("Run exists: ", exists, "\nRun succeeded: ", succeeded, "\nRun QC status:", r['status']['state'], "\nRun in progress: ", inprogress,"\nRun analysis skipped:", analysisSkip, "\nData reviewed:", not pending,file=sys.stderr)
     if analysisSkip:
         print("Pinery: Run Analysis is skipped. Clean run",file=sys.stderr)
         return CLEAN
@@ -154,9 +154,9 @@ def print_verbose(run):
 
 def print_verbose_position(pos,offline=False):
     if pos['exsample_url'] == "Unknown" or offline:
-        print("Lane:",pos['lane'],"\tNum Libraries:",pos['num_samples'],"\tAnalysis Skipped:",pos['analysis_skipped'], "\tPending QC:",pos['num_notready'],file=sys.stderr)
+        print("Lane:",pos['lane'],"\tNum Libraries:",pos['num_samples'],"\tAnalysis Skipped:",pos['analysis_skipped'], "\tPending QC:",pos['num_notready'],"\tPending Review:",pos['num_pending'],file=sys.stderr)
     else:
-        print("Lane:",pos['lane'],"\tNum Libraries:",pos['num_samples'],"\tAnalysis Skipped:",pos['analysis_skipped'],"\tPending QC:",pos['num_notready'],"\tExample: ", get_pinery_obj(pos['exsample_url'])['name'], file=sys.stderr)
+        print("Lane:",pos['lane'],"\tNum Libraries:",pos['num_samples'],"\tAnalysis Skipped:",pos['analysis_skipped'],"\tPending QC:",pos['num_notready'],"\tPending Review:",pos['num_pending'],"\tExample: ", get_pinery_obj(pos['exsample_url'])['name'], file=sys.stderr)
 
 def get_skipped_lanes(r):
     lanes={}
