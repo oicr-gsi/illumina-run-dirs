@@ -52,7 +52,7 @@ Because of the requirement to authenticate in JIRA, this script should be run as
 
 If you must run using an insecure account, set the JIRA\_AUTH environment variable (and make sure that bash history immediately forgets about it).
 
-    history -d $((HISTCMD-1)) && export JIRA_AUTH='YOUR_GITHUB_PERSONAL_ACCESS_TOKEN'
+    history -d $((HISTCMD-1)) && export JIRA_AUTH='YOUR_JIRA_PERSONAL_ACCESS_TOKEN'
 
 
 
