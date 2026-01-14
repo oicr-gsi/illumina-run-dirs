@@ -21,8 +21,8 @@ def main(args):
         runs = get_sequencer_runs(args.run,url=url)
     else:
         runs = open_json(args.json,args.run)
-    return(decisions(runs,verbose=args.verbose,offline=args.offline))
-
+    all_decisions = [decisions(run,verbose=args.verbose,offline=args.offline) for run in runs]
+    return max(all_decisions)
 
 def get_sequencer_run(runs_obj, rname):
     """
@@ -76,57 +76,61 @@ def get_pinery_obj(url):
     except urllib.error.HTTPError as e:
         print("Pinery HTTP error: %d" % e.code, file=sys.stderr)
         sys.exit(e.code)
-    except urllib2.error.URLError as e:
+    except urllib.error.URLError as e:
         print("Pinery Network error: %s" % e.reason.args[1], file=sys.stderr)
         sys.exit(2)
     return sample
 
 
-def decisions(r, verbose=False, offline=False):
+def decisions(run, verbose=False, offline=False):
     succeeded=False
     inprogress=False
     exists=False
     pending=False
     positions=[]
     #check if at least one matching run exists
-    if r:
+    if run:
         exists=True
     if verbose:
-        print_verbose(r)
-    if r['state'] == "Completed":
+        print_verbose(run)
+    if run['state'] == "Completed":
         succeeded=True
-        for p in r['positions']:
-             pos={}
-             pos['lane']=p['position']
-             pos['analysis_skipped']=p['analysis_skipped']
-             if 'samples' in p:
-                # exclude failed samples from the count
-                pos['num_samples'] = len([x for x in p['samples'] if not (x['status']['state'] == "Failed" or x['data_review'] == "Failed")])
-                pos['exsample_url']=p['samples'][0]['url'].replace("http://localhost:8080",oicrurl)
-                pos['num_pending'] = len([x for x in p['samples'] if (x['data_review'] == "Pending")])
-                pos['num_notready'] = len([x for x in p['samples'] if (x['status']['name'] == "Not Ready")])
-                if pos['num_notready'] > 0:
-                    pending=True
-             else:
-                 pos['num_samples']="Unknown"
-                 pos['exsample_url']="Unknown"
-                 pos['num_pending'] = "Unknown"
-                 pos['num_notready'] = "Unknown"
-             positions.append(pos)
-             if verbose:
-                 print_verbose_position(pos,offline)
-    elif r['state']=="Running":
-        inprogress=True
 
-    if r['data_review']=="Pending":
+    if len(run['containers']) > 1:
+        raise Exception("Multiple run containers detected, but we currently only support one")
+
+    for p in run['containers'][0]['positions']:
+     pos={}
+     pos['lane']=p['position']
+     pos['analysis_skipped']=p['analysis_skipped']
+     if 'samples' in p:
+        # exclude failed samples from the count
+        pos['num_samples'] = len([x for x in p['samples'] if not (x['status']['state'] == "Failed" or x['data_review'] == "Failed")])
+        pos['exsample_url']=p['samples'][0]['url'].replace("http://localhost:8080",oicrurl)
+        pos['num_pending'] = len([x for x in p['samples'] if (x['data_review'] == "Pending")])
+        pos['num_notready'] = len([x for x in p['samples'] if (x['status']['name'] == "Not Ready")])
+        if pos['num_notready'] > 0:
+            pending=True
+     else:
+         pos['num_samples']="Unknown"
+         pos['exsample_url']="Unknown"
+         pos['num_pending'] = "Unknown"
+         pos['num_notready'] = "Unknown"
+     positions.append(pos)
+     if verbose:
+         print_verbose_position(pos,offline)
+     elif run['state']=="Running":
+         inprogress=True
+
+    if run['data_review']=="Pending":
         pending=True
     analysisSkip=False
-    if get_positions(r) == 0:
+    if get_positions(run) == 0:
         analysisSkip=True
-    if r['status']['state']=="Failed":
+    if run['status']['state']=="Failed":
         analysisSkip=True
     if verbose:
-        print("Run exists: ", exists, "\nRun succeeded: ", succeeded, "\nRun QC status:", r['status']['state'], "\nRun in progress: ", inprogress,"\nRun analysis skipped:", analysisSkip, "\nData reviewed:", not pending,file=sys.stderr)
+        print("Run exists: ", exists, "\nRun succeeded: ", succeeded, "\nRun QC status:", run['status']['state'], "\nRun in progress: ", inprogress,"\nRun analysis skipped:", analysisSkip, "\nData reviewed:", not pending,file=sys.stderr)
     if analysisSkip:
         print("Pinery: Run Analysis is skipped. Clean run",file=sys.stderr)
         return CLEAN
@@ -160,20 +164,26 @@ def print_verbose_position(pos,offline=False):
 
 def get_skipped_lanes(r):
     lanes={}
-    for p in r['positions']:
+    if len(r['containers']) > 1:
+        raise Exception("Multiple run containers detected, but we currently only support one")
+    for p in r['containers'][0]['positions']:
         lanes[p['position']]=p['analysis_skipped']
     return lanes
 
 def get_positions(r):
     positions=0
-    patt_nextseq=re.compile("\d{6}_NB\d*_.*")
+    patt_nextseq=re.compile(r"\d{6}_NB\d*_.*")
     somethingSkipped=False
+
+    if len(r['containers']) > 1:
+        raise Exception("Multiple run containers detected, but we currently only support one")
+
     if r['state'] == "Completed":
         succeeded=True
-        for p in r['positions']:
+        for p in r['containers'][0]['positions']:
             if p['analysis_skipped']==False:
                 positions+=1
-        if positions < len(r['positions']):
+        if positions < len(r['containers'][0]['positions']):
             somethingSkipped=True
     # catch standard Novaseq or Nextseq
     # if the run is skipped, don't set it back to 1; set it to 0

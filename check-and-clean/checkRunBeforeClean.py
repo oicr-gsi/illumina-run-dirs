@@ -15,10 +15,10 @@ def main(args):
     decision="Clean"
     pveto=False
     
-    pruns = pinery.get_pinery_obj(pineryurl+"/sequencerrun?name="+args.run)
+    prun = pinery.get_pinery_obj(pineryurl+"/sequencerrun?name="+args.run)
     
-    presult = pinery.decisions(pruns, verbose=args.verbose)
-    pskippedlanes=pinery.get_skipped_lanes(pruns)
+    presult = pinery.decisions(prun, verbose=args.verbose)
+    pskippedlanes=pinery.get_skipped_lanes(prun)
     if args.verbose:
         print("------------------------\nPinery done\n------------------------", file=sys.stderr)  
 
@@ -75,7 +75,7 @@ def main(args):
         if args.verbose:
             print("------------------------\nFPR\n------------------------", file=sys.stderr)
         sruns = fpr.get_sequencer_run(args.run,pskippedlanes,fpr=anfpr)
-        sresult = fpr.decisions(sruns,expected_lanes=pinery.get_positions(pruns),verbose=args.verbose)
+        sresult = fpr.decisions(sruns,expected_lanes=pinery.get_positions(prun),verbose=args.verbose)
         if sresult==fpr.NO_CLEAN:
             result.append("FPR:No Clean")
             decision="No Clean"
