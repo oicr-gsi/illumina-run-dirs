@@ -96,7 +96,10 @@ def decisions(run, verbose=False, offline=False):
     if run['state'] == "Completed":
         succeeded=True
 
-    for p in run['positions']:
+    if len(run['containers']) > 1:
+        raise Exception("Multiple run containers detected, but we currently only support one")
+
+    for p in run['containers'][0]['positions']:
      pos={}
      pos['lane']=p['position']
      pos['analysis_skipped']=p['analysis_skipped']
@@ -161,7 +164,9 @@ def print_verbose_position(pos,offline=False):
 
 def get_skipped_lanes(r):
     lanes={}
-    for p in r['positions']:
+    if len(r['containers']) > 1:
+        raise Exception("Multiple run containers detected, but we currently only support one")
+    for p in r['containers'][0]['positions']:
         lanes[p['position']]=p['analysis_skipped']
     return lanes
 
@@ -169,12 +174,16 @@ def get_positions(r):
     positions=0
     patt_nextseq=re.compile(r"\d{6}_NB\d*_.*")
     somethingSkipped=False
+
+    if len(r['containers']) > 1:
+        raise Exception("Multiple run containers detected, but we currently only support one")
+
     if r['state'] == "Completed":
         succeeded=True
-        for p in r['positions']:
+        for p in r['containers'][0]['positions']:
             if p['analysis_skipped']==False:
                 positions+=1
-        if positions < len(r['positions']):
+        if positions < len(r['containers'][0]['positions']):
             somethingSkipped=True
     # catch standard Novaseq or Nextseq
     # if the run is skipped, don't set it back to 1; set it to 0
