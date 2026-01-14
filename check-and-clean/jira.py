@@ -51,8 +51,10 @@ def get_sequencer_runs_by_text(rname,url=oicrurl):
         tickets=json.load(result)
     except urllib.error.HTTPError as e:
         print("HTTP error: %d" % e.code, file=sys.stderr)
+        raise e
     except urllib.error.URLError as e:
         print("Network error: %s" % e.reason.args[1], file=sys.stderr)
+        raise e
     return tickets
 
 def get_sequencer_runs_by_summary(rname,url=oicrurl):
@@ -68,8 +70,10 @@ def get_sequencer_runs_by_summary(rname,url=oicrurl):
         tickets=json.load(result)
     except urllib.error.HTTPError as e:
         print("HTTP error: %d" % e.code, file=sys.stderr)
+        raise e
     except urllib.error.URLError as e:
         print("Network error: %s" % e.reason.args[1], file=sys.stderr)
+        raise e
     return tickets
 
 

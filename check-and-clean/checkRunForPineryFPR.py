@@ -6,6 +6,7 @@ import argparse
 
 
 def main(args):
+    pineryurl = "http://pinery.gsi.oicr.on.ca"
     if args.verbose:
         import time
         print(time.strftime("%d/%m/%Y %H:%M:%S"),args.run, file=sys.stderr)
