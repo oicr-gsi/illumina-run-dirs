@@ -1,14 +1,23 @@
 #!/usr/bin/python
-import pinery,fpr,jira
+import pinery,fpr,jira,cardea
 import argparse
+import time
 
 def main(args):
     base_pinery_url = args.pinery_url
+    base_cardea_url = args.cardea_url
 
     if args.verbose:
-        import time
+        print(time.strftime("%d/%m/%Y %H:%M:%S"), args.run, file=sys.stderr)
+        print("------------------------\nCardea\n------------------------", file=sys.stderr)
+
+    cardea_sequencer_run_case_statuses = cardea.get_sequencer_run_case_statuses(args.run, base_cardea_url, verbose=args.verbose)
+    cardea_decision = cardea.decisions(cardea_sequencer_run_case_statuses, args.run, verbose=args.verbose)
+
+    if args.verbose:
+        print(f"Cardea decision for {args.run} = {cardea_decision}", file=sys.stderr)
         print(time.strftime("%d/%m/%Y %H:%M:%S"),args.run, file=sys.stderr)
-        print("------------------------\nPinery\n------------------------", file=sys.stderr)
+        print("------------------------\nCardea done\n------------------------", file=sys.stderr)
 
 
     result=[args.run]
@@ -34,6 +43,11 @@ def main(args):
         result.append("Pinery: In progress run")
         decision="No Clean"
         pveto=True
+    elif presult==pinery.NO_QCS and cardea_decision==cardea.CLEAN:
+        # special situation where we allow Cardea case statuses override Pinery signoff statuses
+        if args.verbose:
+            print(f"Warning: {args.run} Pinery signoffs are not complete, but Cardea case signoffs are - proceeding with cleaning", file=sys.stderr)
+        decision="Clean"
     elif presult==pinery.NO_QCS and args.fpr is None:
         result.append("Pinery: Signoffs not complete")
         decision="No Clean"
@@ -102,6 +116,7 @@ if __name__ == "__main__":
     parser.add_argument("--run", "-r", help="the name of the sequencer run, e.g. 111130_h801_0064_AC043YACXX", required=True)
     parser.add_argument("--fpr", "-f", help="enable searching the FPR by providing path to the file provenance report. Increases time substantially and toggles off QC checking.")
     parser.add_argument("--verbose","-v", help="Verbose logging",action="store_true")
-    parser.add_argument("--pinery-url", help="The pinery URL", default="http://pinery.gsi.oicr.on.ca")
+    parser.add_argument("--pinery-url", help="The Pinery URL", default="http://pinery.gsi.oicr.on.ca")
+    parser.add_argument("--cardea-url", help="The Cardea URL", default="https://cardea.gsi.oicr.on.ca")
     args=parser.parse_args()
     main(args)
