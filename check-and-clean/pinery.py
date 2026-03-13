@@ -5,8 +5,6 @@ import argparse
 import re
 import urllib.request, urllib.error, urllib.parse,ssl
 
-oicrurl="http://pinery.gsi.oicr.on.ca"
-
 DELETE=-1
 CLEAN=0
 NO_CLEAN=1
@@ -14,14 +12,12 @@ NO_QCS=2
 CONTINUE=100
 
 def main(args):
-    url=oicrurl
-    if args.url is not None:
-        url=args.url
+    base_pinery_url = args.pinery_url
     if args.json is None and not args.offline:
-        runs = get_sequencer_runs(args.run,url=url)
+        runs = get_sequencer_runs(args.run, base_pinery_url=base_pinery_url)
     else:
         runs = open_json(args.json,args.run)
-    all_decisions = [decisions(run,verbose=args.verbose,offline=args.offline) for run in runs]
+    all_decisions = [decisions(run,base_pinery_url,verbose=args.verbose,offline=args.offline) for run in runs]
     return max(all_decisions)
 
 def get_sequencer_run(runs_obj, rname):
@@ -36,7 +32,7 @@ def get_sequencer_run(runs_obj, rname):
             runs.append(i)
     return runs
 
-def get_sequencer_runs(rname,url=oicrurl):
+def get_sequencer_runs(rname, base_pinery_url):
     """
     Gets all of the sequencer runs that match rname from pinery webservice.
     """
@@ -44,9 +40,9 @@ def get_sequencer_runs(rname,url=oicrurl):
     ctx = ssl.create_default_context()
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
-    url=url+"/sequencerruns"
+    pinery_url= base_pinery_url + "/sequencerruns"
     try:
-        rstr = urllib.request.urlopen(url, context=ctx)
+        rstr = urllib.request.urlopen(pinery_url, context=ctx)
         runs=get_sequencer_run(rstr,rname)
     except urllib.error.HTTPError as e:
         print("Pinery HTTP error: %d" % e.code, file=sys.stderr)
@@ -82,7 +78,7 @@ def get_pinery_obj(url):
     return sample
 
 
-def decisions(run, verbose=False, offline=False):
+def decisions(run, base_pinery_url, verbose=False, offline=False):
     succeeded=False
     inprogress=False
     exists=False
@@ -106,7 +102,7 @@ def decisions(run, verbose=False, offline=False):
      if 'samples' in p:
         # exclude failed samples from the count
         pos['num_samples'] = len([x for x in p['samples'] if not (x['status']['state'] == "Failed" or x['data_review'] == "Failed")])
-        pos['exsample_url']=p['samples'][0]['url'].replace("http://localhost:8080",oicrurl)
+        pos['exsample_url']=p['samples'][0]['url'].replace("http://localhost:8080", base_pinery_url)
         pos['num_pending'] = len([x for x in p['samples'] if (x['data_review'] == "Pending")])
         pos['num_notready'] = len([x for x in p['samples'] if (x['status']['name'] == "Not Ready")])
         if pos['num_notready'] > 0:
@@ -200,7 +196,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Searches for and reports the status of sequencer runs in Pinery")
     parser.add_argument("--run", "-r", help="the name of the sequencer run, e.g. 111130_h801_0064_AC043YACXX", required=True)
     parser.add_argument("--json", "-j", help="The sequencer run JSON file to search")
-    parser.add_argument("--url", help=" ".join(["the pinery URL. Default: ",oicrurl]))
+    parser.add_argument("--pinery-url", help="The pinery URL", default="http://pinery.gsi.oicr.on.ca")
     parser.add_argument("--offline", "-o", help="Run in offline mode (don't attempt to contact Pinery). Should be used in combination with --json option.", action="store_true");
     parser.add_argument("--verbose","-v", help="Verbose logging",action="store_true")
     args=parser.parse_args()

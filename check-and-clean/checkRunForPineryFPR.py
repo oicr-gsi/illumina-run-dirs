@@ -6,7 +6,7 @@ import argparse
 
 
 def main(args):
-    pineryurl = "http://pinery.gsi.oicr.on.ca"
+    base_pinery_url = args.pinery_url
     if args.verbose:
         import time
         print(time.strftime("%d/%m/%Y %H:%M:%S"),args.run, file=sys.stderr)
@@ -17,8 +17,8 @@ def main(args):
         print("If running in offline mode, supply a Pinery JSON file.")
         exit(1)
     else:
-        pruns = [pinery.get_pinery_obj(pineryurl+"/sequencerrun?name="+args.run)]
-    presult = pinery.decisions(pruns, verbose=args.verbose, offline=args.offline)
+        pruns = [pinery.get_pinery_obj(base_pinery_url+"/sequencerrun?name="+args.run)]
+    presult = pinery.decisions(pruns, base_pinery_url, verbose=args.verbose, offline=args.offline)
     if args.verbose:
         print("------------------------\nFPR\n------------------------", file=sys.stderr)
     if args.fpr:
@@ -67,5 +67,6 @@ if __name__ == "__main__":
     parser.add_argument("--pineryjson","-j", help="Location of the Pinery sequencerrun JSON file for offline mode")
     parser.add_argument("--offline","-o", help="Offline mode. Don't attempt to contact Pinery", action="store_true")
     parser.add_argument("--fpr","-f", help="Alternative file provenance report, TSV format with header, zipped.")
+    parser.add_argument("--pinery-url", help="The pinery URL", default="http://pinery.gsi.oicr.on.ca")
     args=parser.parse_args()
     main(args)

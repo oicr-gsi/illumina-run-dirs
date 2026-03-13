@@ -3,7 +3,7 @@ import pinery,fpr,jira
 import argparse
 
 def main(args):
-    pineryurl="http://pinery.gsi.oicr.on.ca"
+    base_pinery_url = args.pinery_url
 
     if args.verbose:
         import time
@@ -15,9 +15,9 @@ def main(args):
     decision="Clean"
     pveto=False
     
-    prun = pinery.get_pinery_obj(pineryurl+"/sequencerrun?name="+args.run)
+    prun = pinery.get_pinery_obj(base_pinery_url+"/sequencerrun?name="+args.run)
     
-    presult = pinery.decisions(prun, verbose=args.verbose)
+    presult = pinery.decisions(prun, base_pinery_url, verbose=args.verbose)
     pskippedlanes=pinery.get_skipped_lanes(prun)
     if args.verbose:
         print("------------------------\nPinery done\n------------------------", file=sys.stderr)  
@@ -102,5 +102,6 @@ if __name__ == "__main__":
     parser.add_argument("--run", "-r", help="the name of the sequencer run, e.g. 111130_h801_0064_AC043YACXX", required=True)
     parser.add_argument("--fpr", "-f", help="enable searching the FPR by providing path to the file provenance report. Increases time substantially and toggles off QC checking.")
     parser.add_argument("--verbose","-v", help="Verbose logging",action="store_true")
+    parser.add_argument("--pinery-url", help="The pinery URL", default="http://pinery.gsi.oicr.on.ca")
     args=parser.parse_args()
     main(args)
